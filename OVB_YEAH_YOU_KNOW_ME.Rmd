@@ -115,12 +115,7 @@ Here we attempt to provide a guide to simple forms of coping with omitted variab
 ----  
 
 **How to know when you're F-ed**  
--  Causal diagrams (and regression thinking)  
--  Where do we put unobserved variables (known and unknown)  
--  Causal diagrams and experiments  
--  Using the back-door criteria to know if you're f-ed  
--  Any other tests here?  
-  
+
 Omitted variable problems are often raised at the tail-end of a research project. You might be hip-deep in an analysis, when you realize that you have missed some key aspect of a system. Or, a hopefully friendly colleague raises the point at a conference talk - or even in a review of your manuscript. While a standard answer to these concerns is to trust in one's study design and state something along the lines of, "We attempted to sample over all ranges of other covariates so that they would only enter in the error term of the model," how do you **know** that this is the truth? In particular, if an omitted variable is correlated with predictors of interest, that statement is likely false. How can we tell?
   
 Making a causal diagram of your system - of both what one can and cannot measure - can aid immensely in determining where omitted variable problems in a study might lie. We have already presented two (Figs. 1,2), but let us take a moment to break down the pieces of a causal diagram. We do this adopting the symbology common in Structural Equation Modeling (Bollen 1989), as it provides a useful language for diagramming a system. There are others, but  the core concepts of how we use them are fairly transportable between notations. First, we have observed variables - things that can be and are tangibly measured. We will represent these as terms within boxes, as are temperature and snails in Figure 2. Second, unobserved and conceptual variables. We will present these as terms within ellipses. These variables might be things that are not measured, such as recruitment in Figure 2. They might be latent variables that represent a wide swath of variables that are collected into a single concept. For example, both recruitment and residual variation - error - in Figure 2. Finally, variables are connected by paths - i.e., arrows. For the sake of simplicity, let us only consider causal diagrams with no feedbacks - so-called Directed Acyclic Graphs, or DAGs.
