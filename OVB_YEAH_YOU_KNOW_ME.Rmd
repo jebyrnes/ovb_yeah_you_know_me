@@ -1,0 +1,547 @@
+---
+title: "Oh S**T! I forgot to measure that! Coping with Unobserved variable bias for the causal analysis of observational data"
+output:
+  output: html_document
+---
+
+
+<p style="color:red">test text</p>
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message=FALSE)
+
+#data
+library(dplyr)
+library(tidyr)
+
+#graphics
+library(ggplot2)
+library(DiagrammeR)
+library(patchwork)
+
+#setup a default graph theme
+set_graph_theme <- . %>%
+  add_global_graph_attrs(attr = "penwidth",
+                         value = 2,
+                         attr_type = "node") %>%
+  add_global_graph_attrs(attr = "fillcolor",
+                         value = "white",
+                         attr_type = "node") %>% 
+  add_global_graph_attrs(attr = "fontname",
+                         value = "arial",
+                         attr_type = "node") %>%
+  add_global_graph_attrs(attr = "fontsize",
+                         value = "14",
+                         attr_type = "node") %>%
+  add_global_graph_attrs(attr = "color",
+                         value = "black",
+                         attr_type = "node")%>%
+  add_global_graph_attrs(attr = "color",
+                         value = "black",
+                         attr_type = "edge")%>%
+  add_global_graph_attrs(attr = "penwidth",
+                         value = 3,
+                         attr_type = "edge")
+```
+
+
+**Introduction**  
+  - Why is unobserved variable bias a problem in ecology  
+  - A bit of econometrics  
+  - Here we provide a guide  
+
+We have all been there. As a PhD student, you complete a field season's worth of work observing your study system, measuring as much as was humanly possible for you and your research assistants, only to come in front of your committee as one member sagely raises an eyebrow in looking at your analysis and suggest, "Why didn't you measure that? It could confound your entire story!" As a PostDoc, you are handed an amazing set to work with to make your career, but you swiftly notice it is missing the key variable is needed to properly resolve the story you want to tell. As a PI, you are ready to move from small-scale experiments to testing whether your theories are applicable across large spatial and temporal scales - but measurement of key elements of the system are simply not possible outside of small confined environments. Or, more vexingly, any attempt to do so is called 'ambitious' by funding agencies, leading to proposals being rejected.  
+  
+As Ecology advances to tackle problems at scales from the continental to global, we are putting our theories to the test like never before. Our ability to obtain meaningful results with clear causal connections is limited by two things. First,  our ability to imagine how the different elements of our ecological systems of interest are linked together. Second, armed with this understanding, the use of proper models that can help us derive causal inference from observational data in the abscence of key factors. We are always going to miss something. Period. Rather than to throw up our hands and abandon observational methods for causal inference because of this fact, it is better to try and understand what are the solutions to the grand problem of **omitted variable bias**. 
+  
+Omitted variable bias occurs when a predictor of interest is correlated with a second variable that you have not measured and is not in your model of a system. Think of a system where both temperature and recruitment influence the abundance of snails in a marine benthic ecosystem (Fig. 1). Temperature influences metabolic and mortality rates. At the same time, the same oceanographic influences that shape temperature also shape recruitment of new juvenile snails. You go out and measure both snail abundance and temperature at a number of sites, but not recruitment. 
+
+```{r fig1, fig.cap="Diagram of causal connections in an example system. Variables with boxes around them are measured variables. Variables with ellipses around them are unmeasured variables. e is for additional sources of variability uncorrelated with other drivers."}
+
+snail_simple <- create_graph(
+  nodes_df = create_node_df(
+  n = 5,
+  label = c("temperature", "snails", "recruitment", "oceanography", "e"),
+  shape = c("rectangle", "rectangle", "ellipse", "ellipse", "circle"),
+  fixedsize   = FALSE,
+  x = c(2,4,2,0,4.7),
+  y = c(1,2,3,2, 3.2)),
+  
+  edges_df = create_edge_df(
+    from = c(1,3,4,4,5),
+    to = c(2,2,1,3,2),
+    rel = "leading_to")
+) %>% 
+  set_graph_theme
+
+render_graph(snail_simple)
+```
+
+Depending on how temperature and recruitment are correlated, statistical estimates of the effect of temperature on abundance will be *biased*. If they have the same sign of effect, then estimates of the temperature effect will be too high. If they are opposite in sign, estimates will be biased towards zero. If one has an effect and the other does not, your model could produce a false positive. That is because recruitment is omitted from your model. In the more general case (Fig. 2), for any predictor X, any unmeasured variable that either causes both X and a response Y, or whose ultimate cause influences X while it influences Y - is an omitted variable that can bias your estimates of the causal influence of X on Y.
+
+```{r fig2}
+
+ovb_ex <- create_graph(
+  nodes_df = create_node_df(
+  n = 9,
+  label = c("x", "y", "ommited\nvariable",
+            "x", "y", "ommited\nvariable", "shared\ndriver",
+            "2a)", "2b)"),
+  shape = c("rectangle", "rectangle", "ellipse", 
+            "rectangle", "rectangle", "ellipse", "ellipse",
+            "none", "none"),
+  fixedsize   = FALSE,
+  x = c(1,3,2,
+        1,3,2.5,2,
+        0.5, 0.5),
+  y = c(5,5,6,
+        1,1,2,3,
+        7,2)),
+  
+  edges_df = create_edge_df(
+    from = c(1,3,3,4,6,7,7),
+    to = c(2,2,1,5,5,4,6),
+    rel = "leading_to")
+)%>% 
+  set_graph_theme
+
+render_graph(ovb_ex)
+```
+
+Omitted variable bias is not a new problem. Fields such as psychology, econometrics, education, sociology, and more have been grappling with it for some time (REFS). These are fields that often cannot perform experiments for logistical or ethical reasons. You cannot replicate a country. You cannot begin to imagine, let alone measure, all of the forces that shape whole economies. One can only tweak curricula so far in an effort to understand educational outcomes. Yet, these disiciplines are tasked with coming up with causal inferences based on observational data that surely has omitted variables confounded with predictors of interest.
+  
+Here we attempt to provide a guide to simple forms of coping with omitted variable bias. We begin by laying out criteria for understanding when and where omitted variable bias could be important. We discuss study designs that, while omitted variables are still unmeasured, are ideal for analyses that can deconfound omitted variable bias. We then review several robust techniques to model data with omitted variables, and provide guidelines for chosing among them. As applied researchers, we have found that these guidelines have clarified our own thinking about the analysis of ecological systems. We hope that these relatively straightforwrd techniques might enable other researchers to do more with less, as it were, and help advance the field of Ecology at scale.
+
+
+----  
+
+**How to know when you're F-ed**  
+-  Causal diagrams (and regresion thinking)  
+-  Where do we put unobserved variables (known and unknown)  
+-  Causal diagrams and experiments  
+-  Using the back-door criteria to know if you're f-ed  
+-  Any other tests here?  
+  
+Omitted variable problems are often raised at the tail-end of a research project. You might be hip-deep in an analysis, when you realize that you have missed some key aspect of a system. Or, a hopefully friendly colleague raises the point at a conference talk - or even in a review of your manuscript. While a standard answer to these concerns is to trust in one's study design and state something along the lines of, "We attempted to sample over all ranges of other covariates so that they would only enter in the error term of the model," how do you **know** that this is the truth? In particular, if an omitted variable is correlated with predictors of interest, that statement is likely false. How can we tell?
+  
+Making a causal diagram of your system - of both what one can and cannot measure - can aid immensely in determining where omitted variable problems in a study might lie. We have already presented two (Figs. 1,2), but let us take a moment to break down the pieces of a causal diagram. We do this adopting the symbology common in Structural Equation Modeling (Bollen 1989), as it provides a useful language for diagramming a system. There are others, but  the core concepts of how we use them are fairly transportable between notations. First, we have observed variables - things that can be and are tangibly measured. We will represent these as terms within boxes, as are temperature and snails in Figure 2. Second, unobserved and conceptual variables. We will present these as terms within ellipses. These variables might be things that are not measured, such as recruitment in Figure 2. They might be latent variables that represent a wide swath of variables that are collected into a single concept. For example, both recruitment and residual variation - errror - in Figure 2. Finally, variables are connected by paths - i.e., arrows. For the sake of simplicity, let us only consider causal diagrams with no feedbacks - so-called Directed Acyclic Graphs, or DAGs.
+
+  
+Causal diagrams are terribly useful with respect to thinking about what we need to include in any univariate analysis with multiple predictor variables. First, causal diagrams help us see what types of statistical models are actually invalid. CHAIN COLLIDER DESCENDENT DEFINITIONS?. Second, they show us what variables we absolutely must include in a model in order to produce meaningful results. Variables that influence both a cause and effect must be included for proper inference. Neglecting them is the *prima facie* case of omitted variable bias. Missing this type of variable is the stuff of nightmares when presenting an analysis to colleagues or critical reviewers. However, causal diagrams allow us to detect a broader class of variables that must be accounted for in analyses with multiple predictor variables.
+
+```{r, fig.caption = "Taxonomy of a DAG?"}
+#Taxonomy of DAG?
+```
+
+Many drivers in a system can influence both a cause and effect while lacking a direct connection to one or both.  This coupling of a cause and effect via a perhaps distant unmeasured variable means that any analysis will violate the **back-door criterion** for causal validity. The back-door criterion is explored in depth by Pearl and colleagues (REF). When a driver has an indirect effect on either a cause or effect, it opens a so-called back-door for information to flow between the two variables. Models that do not account for the open back door will never provide valid causal inference. Without a causal diagram, it can be difficult to understand whether the influence of these variables must be controlled for somehow. However, once visualized, their importance becomes obvious.
+  
+If a researcher is concerned about whether their model suffers from unobserved variable bias, constructing a causal diagram is the swiftest way to determine if there is an obvious problem. This is not to say they will always be correct - hypothesized causal diagrams can be incorrect. Therefore, adjusting for known omitted variables might still be insufficient. Nevertheless, they should provide a simple means to address the worries of a researcher late in the research process who has suddenly has to contend with the possibility that they did not measure what could be an important variable.
+  
+ADDITIONAL OV TESTING PARAGRAPH - HAUSMAN TEST? OTHERS? LAURA?
+
+---
+**A Front-door solution** 
+
+Perhaps one of the least implemented but most powerful solution is building a model to achieve the so-called Front-Door criterion (PEARL REF). Simply put, if you have an open back door, if there is a variable that mediates the relationship between a purported cause and effect and is not influenced by anything other than the cause, then we can establish a link between the cause and effect as well as estimate it's net effect size by looking at the change in the mediator due to its cause and the corresponding change in the response due to the change in the mediator. This is naturally done in Structural Equation Modeling (Bollen 1989), for example. 
+  
+To clarify the front-door criterion, consider an example. A sewage plant is suspected of causing mortality of soft sediment organisms on a bay. However, all of the impacts are in the nearshore. Control sites are far away, and have different abiotic regimes - temperature, depth, recruitment, etc. However, the sewage plant puts out sludge. Thus, an attempt to look at the relationship between distance from sewage plant outfall and, say, infaunal species richness would be hopelessly contaminated by a number of open backdoors. However, if at least one of the impacts is via deposition of sludge, then we can estimate a) the relationship between distance from plant and depth of sludge on the benthos and b) depth of sludge and infaunal species richness. If both relationships are different from zero, then there is an impact of the sewage plant. Further, as sludge depth is correlated with the myriad of other impacts that we have not measured, if we estimate the effect of one unit change in distance on sludge, and the corresponding change in that number of units of sludge on species richness, we have a net estimate of the sewage plant on species richness.
+
+```{r figFD, fig.cap="Front door example."}
+
+fd_example <- create_graph(
+  nodes_df = create_node_df(
+  n = 5,
+  label = c("distance to\nsewage\noutfall", "sludge\ndepth", "infaunal\nrichness", "other\ndrivers", "e"),
+  shape = c("rectangle", "rectangle", "rectangle", "ellipse", "circle"),
+  fixedsize   = FALSE,
+  x = c(1,3,5,3,6),
+  y = c(1,1,1,3,2)),
+  
+  edges_df = create_edge_df(
+    from = c(1,2,4,4,5),
+    to = c(2,3,1,3,3),
+    rel = "leading_to")
+)%>% 
+  set_graph_theme
+
+render_graph(fd_example)
+```  
+
+*Note to self - discuss Bellmare paper that just came out with its conditional independence.*
+
+----  
+
+Designs to cope with unobserved variable bias  
+-  Adjusting for the back-door
+-  The SRD for cross-sectional data  
+-  Longitudinal studies  
+-  Mixed design (see crazy Poe equation)  
+
+There are multiple study designs that researchers can use in order to prevent omitted variable bias from becomming a problem. These designs require foreknowledge (or at least foreassumptions) about where omitted variable bias could become problematic. As with any study design, they can of course inflate the cost of a study, change sample allocation and thus cause other issues that could reduce power, or wreak havoc in other ways. Even when using them, we highly recommend looking at sample allocation in order to maximize the ability to detect signals of key predictors in the face of sources of environmental variability that do not influence results via the backdoor (SCOTT REFERENCES AND THE LIKE).
+   
+The most obvious solution is to design one's study to incorporate confounding variables. This does not mean measuring every single variable that is correlated with both the predictor and response. Rather, a researcher can use their causal diagram wisely in order to determine a (hopefully) small suite of variables through which the influences of any omitted variable flows. Consider the graph in Figure XXXX.
+    
+In this system, one could control for all of the confounding variables in determining a relationship between x1 and y simply by including z1. Alternately, including x2, z3, and z2 would also be sufficient. This is a far cry from including everything in the diagram. By realizing the small suite of variables a researcher needs to sample for a specific question, the problem of study design or justification to skeptical reviewers becomes far less daunting.
+
+```{r figXXXX}
+create_graph(
+  nodes_df = create_node_df(n = 9,
+                            label = c(paste0("x",1:6),"y", "z1", "z2"),
+                            x = c(1, 2:6, 7, 1, 6),
+                            y = c(1, 2:6, 1, 5, 3)),
+  edges_df = create_edge_df(
+    from = c(1:6,rep(8,6),9),
+    to = c(rep(7,3), rep(9,3), 1:6,7)
+  )
+) %>% 
+  set_graph_theme %>%
+  render_graph()
+```
+
+In many cases, sampling more predictors and responses might not be possible, despite knowledge that other variables are important from *a priori* causal diagrams. For example, consider investigations using repurposed datasets or if additional measurements are too expensive. There are a wide variety of solutions to this problem, each utilizing some sort of grouping structure where groups are a stand-in for omitted variables. In the *Statistical Approaches* section, we'll discuss how those groups should be modeled. But, in general, designs that recognize at what level these additional omitted variables influence the system can be used with care to accomodate omitted variable bias. These can be classic stratified random sampling designs or various modifications (SCOTT PAPERS), accomodating omitted variables that vary at the group-level. These SRDs can be either spatial, for purely cross-sectional data, or temporal, for omitted variables that might vary through time. Similarly, longitudinal sampling designs - sampling the same plots or sites over time - allow for researchers to adjust for omitted variables that covary with site. Combinations of multiple group-types are also possible. For example, taking multiple replicates from multiple sites that are resampled over time can enable a researcher to accomodate both spatial and temporal omitted variables. This grouping approach can extend further to different types of groups and can be adapted into designs with variable groups, etc (e.g., Lebo and Weber 2015).
+
+  
+
+----  
+
+**Statistical Approaches to Coping with Unobserved Variables Using Groups**
+
+Assuming that you have used a grouping approach above, there are multiple ways to approach the analysis of the data. These different methodologies have different costs and benefits. Below, we discuss how this problem can be approached, point out which methodologies work, and what additional assumptions must be met in order for them to be valid.
+
+To make this general, we'll talk in terms of predictors (x), responses (y), and confounding variables (z). To make this concrete, we'll talk in terms of a study executed in the snail system referenced in Figure 1 where different sites (i) were sampled at multiple time points (j) using a longitudinal design. Not everyone learns well from abstract symbols! 
+
+*Random Effects Models*
+
+RE model - and it's problems (test?)  
+      Test of RE assumption of independence b/t predictor and group  
+
+Mixed models have been all the rage in ecology for the past decade (Bolker and other refs). Originally drawn from ways to handle variation in experiments (Yates, others), they are a powerful tool when applied to observational data in order to properly partition variation, and thus obtain correct estimates of precision for coefficients (Gelman and Hill 2006). Many ecologists might look at a study such as the snail one described and create a model like the following:
+
+$$y_{ij}  = \beta_0 + \beta_1 x_{ij} + \delta_i + \epsilon_{ij} \\
+\delta_i \sim \mathcal{N}(0, \sigma^2_{site}) \\ \\
+\epsilon_{ij} \sim \mathcal{N}(0, \sigma^2)$$
+
+or, more plainly,
+
+$$snails_{ij} = mean \enspace snails \enspace when \enspace temperature \enspace is \enspace 0 + temperature \enspace effect * temperature_{ij} + site \enspace effect_i +  error_{ij}\\ \\
+site \enspace effect_i \sim \mathcal{N}(0, \sigma^2_{site}) \\ \\
+error_{ij} \sim \mathcal{N}(0, \sigma^2)$$
+
+Many will recognize this as a mixed model with a random intercept. Note, we're going to assume normal error throughout, but this framework can easily be generalized to any error distribution. This approach assumes that, from site to site, there is random variation uncorrelated with temperature (Figure RE).
+
+```{r figre}
+
+re_graph <- create_graph(
+  nodes_df = create_node_df(
+  n = 4,
+  label = c("temperature", "snails", "site", "e"),
+  shape = c("rectangle", "rectangle", "ellipse",  "circle"),
+  fixedsize   = FALSE,
+  x = c(2,4,2,4.7),
+  y = c(1,2,3, 3.2)),
+  
+  edges_df = create_edge_df(
+    from = c(1,3,4),
+    to = c(2,2,2),
+    rel = "leading_to")
+)%>% 
+  set_graph_theme
+
+render_graph(re_graph)
+```
+
+In this mixed model framework, the random effects of site are assumed to be uncorrelated with temperature (AHHH NEED REFS PROBABLY A TEXTBOOK). In essence, they are site-level residuals drawn from a normal distribution. They represent all of the other abiotic and biotic forces happening at the site level, and all are assumed to be uncorrelated with temperature at the site level. However, given the information in Figure 1, we know that this is not accurate. A more fair abstracted description of this system that matches with Figure 1 can be seen in Figures GROUPSMOD.
+
+```{r figgroupsmod}
+
+site_graph <- create_graph(
+  nodes_df = create_node_df(
+  n = 6,
+  label = c("temperature", "snails", "site effects\nuncorrelated with temperature", "e", 
+            "site elements\ndriving and\n correlated with\nsite temperature", "non-site drivers of\ntemperature"),
+  shape = c("rectangle", "rectangle", "ellipse",  "circle",  "ellipse"),
+  fixedsize   = FALSE,
+  x = c(2,4,2,4.7, -1,-1),
+  y = c(0,2,3, 3.2, 2,0)),
+  
+  edges_df = create_edge_df(
+    from = c(1,3,4,5,5,6),
+    to =   c(2,2,2,2,1,1),
+    rel = "leading_to")
+)%>% 
+  set_graph_theme
+
+render_graph(site_graph)
+```
+
+From this, it becomes clear that some elements of site are correlated with temperature and some are not. Thus, a mixed model appraoch with a random intercept is misspecified with respect to how the system actually works. If there are no other site elements driving or correlated with temperature, it might produce correct results, but it's likely incorrect. What to do?
+
+*Re-Enter Fixed Effects Models*
+
+  FE approach  
+    Why FE are inefficient, but...
+    For replicates if cross-sectional
+    For sites if longitudinal
+
+One old friend that can help us correct for the problem of omitted variable bias in mixed effects models - the fixed effect model. There are many reasons ecologists have moved from models with fixed effects for groups to those with random effects. Models with random effects, when used properly, are more efficient, requiring lower sample sizes (REF). Further, random effects acknowledge that the effects of elements we're examining in our model are variable. There is inherent variability in the average of snail abundance, say, from site to site. But that variability is clustered, with a few outliers, and many small deviations - a normal distribution. This formulation of how the world works allows us to create best least unbiased predictors of underlying quantities that may differ from our observed sample (EFFRON REF).  However, as we've seen, because random effects estimators assume a lack of a correlation with fixed predictors, we're left with a conundrum.
+
+Fixed effects for groups are inefficient. For each group, we get a corresponding column of dummy 1/0 variables in the model. We are estimating more parameters. As they are fixed effects, however, this framework allows us to control for the relationship between grouping variables and our covariates of interest. So, the fixed effect model
+
+$$y_{ij}  = \beta_0 x_{1ij} + \sum\beta_i x_{2i} + \epsilon_{ij} \\
+\epsilon_{ij} \sim \mathcal{N}(0, \sigma^2)$$
+
+where $x_{1ij}$ is our predictor of interest, $\beta_i$ is the mean for site i, and $x_{2i}$ is a 0 or 1 dummy variable depending on which site we are in. This is, in essence, an ANCOVA model (REF). Graphically, we're reprsenent it as in Figure FIXED.
+
+```{r figfixed}
+fe_graph <- create_graph(
+  nodes_df = create_node_df(
+  n = 4,
+  label = c("temperature", "snails", "site", "e"),
+  shape = c("rectangle", "rectangle", "rectangle",  "circle"),
+  fixedsize   = FALSE,
+  x = c(2,4,2,4.7),
+  y = c(1,2,3, 3.2)),
+  
+  edges_df = create_edge_df(
+    from = c(1,3,4,1),
+    to = c(2,2,2,3),
+    dir = c("forward", "forward", "forward", "both"))#,
+   # tailport = c("e", "e", "s", "w"),
+    #headport = c("w", "w", "n", "w"),
+    #splines = c("none", "none", "none", "spline"))
+)%>% 
+  set_graph_theme
+
+render_graph(fe_graph)
+```
+
+As site is now a fixed effect, we are controlling for different sites having different average temperatures across all measurements. The estimate of the temperature effect is now the effect of temperature controlling for site. Hence, it enables a causally clean estimate of the temperature effect.  
+  
+This technique does have two drawbacks. First, with a large number of sites relative to replicates per site, the model can be highly inefficient and underpowered. This is the reason for the random effects model in the first place! Second, the coefficients for the site effect encompass site effects both correlated and uncorrelated with temperature. This can mean that a researcher has less clarity on what might underly the site effect, if this is of interest. Is it other correlated mechanisms? Is it uncorrelated mechanisms? Who is to say. A researcher might not be interested in this question, however. If a researcher's sample design is sufficient for this modeling approach, they might not even be concerned with the site effect. Indeed, while they can report it or use it to condition on for visual representations of fitted results, it is meaningless with respect to their question of interest, and should be regarded as such.
+    
+**Group Means, Mundlak Devices, and Centering**  
+For blocks, longitudinal, and more
+
+In many cases, the efficiency costs of fixed effects models are too heavy of a burden. Further, researchers might want to either separate out the correlated versus uncorrelated site effects, develop an intuition about correlated drivers, be able to form a hypothesis about whether correlated drivers matter at all, or begin to develop an intuition about the role of uncorrelated site-level drivers in affecting a phenomena. To do so, researchers, want to have both a random effect of site - improving efficiency and helping them to develop an understanding of uncorrelated site effects - and some form of fixed effect that will allow them to control for omitted variables correlated with the driver of interest. 
+   
+The foundation of these approaches is *group means*. For every cluster - site, year, region, etc. - researchers can calculate a group mean to include as a fixed effect. This has the practical effect of meaning that fit models now have a hierarchical predictor. Moreover, coefficients for the driver of interest are now estimated while controlling for the group mean, representing cluster-level correlated drivers. Consider the following model.
+
+$$y_{ij}  = \beta_0 + \beta_1 x_{ij} + \beta_2 \bar{x_{i}} + \delta_i + \epsilon_{ij} \\
+\delta_i \sim \mathcal{N}(0, \sigma^2_{site}) \\ \\
+\epsilon_{ij} \sim \mathcal{N}(0, \sigma^2)$$
+
+Here, $\beta_2 \bar{x_{i}}$ accounts for the effect of cluster-level correlated drivers. In Econometrics, this is known as a Mundlak Device (Mundlak 1978). In the case of our snail example, the model looks like FIGGMC.
+
+```{r figgm}
+
+gm_graph <- re_graph %>%
+  add_node(label = "site mean\ntemperature",
+          node_aes = list(shape = "rectangle",
+           x = 2, y = 2, fixedsize   = FALSE),
+           to = c(2)) %>%
+  add_edge(from = 1, to = 5, rel = "leading_to") %>%
+  set_edge_attrs(edge_attr = "dir", values = c("forward", "forward", "forward", "forward","both"))
+
+render_graph(gm_graph)
+```
+
+From this graph, we can see that the site mean temperature is controlled for in estimating the temperature effect. The site mean temperature effect itself is estimated while controlling for each measured temperature. The interpretation of the site mean temperature effect is somewhat more nebulous.  
+  
+A cleaner model would decompose the effects of correlated drivers and the actual site mean temperature effect into a single term and the unique variability of temperature over and above that of the site mean temperature effect into a separate term. In essence, the site mean temperature term would take on the meaning of a between site effect, and a new term would take on the meaning of a within site temperature effect. We can accomplish this with **group mean centering** where we subtract the cluster level mean from a given predictor. This yields the following model
+
+$$y_{ij}  = \beta_0 + \beta_1 (x_{ij}-\bar{x_{i}}) + \beta_2 \bar{x_{i}} + \delta_i + \epsilon_{ij} \\
+\delta_i \sim \mathcal{N}(0, \sigma^2_{site}) \\ \\
+\epsilon_{ij} \sim \mathcal{N}(0, \sigma^2)$$
+
+This model has the advantage such that the group mean centered term, the within site temperature term, should have the correct coefficient estimate. Moreover, as we've performed group mean centering, there is no longer any correlation with the site mean temperature term. The site mean temperature term now provides an estimate of the effect of correlated between site drivers. If it is the same as the group mean centered term, we might conclude, tentatively, that other effects are not influencing snails.
+
+```{r figgmc}
+
+gmc_graph <- gm_graph %>%
+  set_node_attrs(node_attr = "label", "site temperature\nanomaly", nodes = 1) %>%
+  set_edge_attrs(edge_attr = "label", values = "0 ", from = 1, to = 5) %>%
+  set_edge_attrs(edge_attr = "penwidth", values = 1, from = 1, to = 5) 
+
+
+render_graph(gmc_graph)
+```
+
+You can see immediately how this syncs up with the model in Fig. GROUPSMOD.
+    
+**Differencing for Longitudinal Studies**
+- longitudinal only  
+
+Many studies make use of timeseries at multiple sites. While many of the above methods could be used for such a study, site-level differences can also be pulled out via differencing. In this modeling approach, researchers do not evaluate the relationship between a driver of interest and a response, controlling for unobserved site-level drivers. Instead, researchers ask how *change* in a driver corresponds to *change* in a response. As we are interested in change, the effects of site-level drivers that might be correlated with our driver of interest drop out. The model we fit is, therefore,
+
+$$\Delta y_{ij}  = \beta_0 + \beta_1 \Delta x_{ij}  + \delta_i + \epsilon_{ij} \\
+\delta_i \sim \mathcal{N}(0, \sigma^2_{site}) \\ \\
+\epsilon_{ij} \sim \mathcal{N}(0, \sigma^2)$$
+
+In this model, we could remove the site random effect, as differencing should eliminate those site related drivers that are not correlated with the driver of interest as well. However, as change could vary from site to site, keeping the random effect seems prudent. To see how this plays out for our snail example, we can see the path diagram in FIGDELTA. As change in temperature should have nothing to do with site, there is no longer any need for a correlation between them, and hence the assumptions of mixed models are validated.
+
+
+```{r figdelta}
+
+delta_graph <- create_graph(
+  nodes_df = create_node_df(
+  n = 4,
+  label = c("change in\ntemperature", "change in\nsnails", "site", "e"),
+  shape = c("rectangle", "rectangle", "ellipse",  "circle"),
+  fixedsize   = FALSE,
+  x = c(2,4,2,4.7),
+  y = c(1,2,3, 3.2)),
+  
+  edges_df = create_edge_df(
+    from = c(1,3,4),
+    to = c(2,2,2),
+    rel = "leading_to")
+)%>% 
+  set_graph_theme
+
+render_graph(delta_graph)
+```
+
+Of note, this model loses one time step of data points, presuming that all sites are sampled every time step. This could make this approach less efficient. If sites are sampled irregularly, the model could be modified to incorporate a time since last sample term, and have it interact with the driver of interest in order to standardize for differing sample intervals.
+
+If the drivers correlated with temperature - our driver of interest - are also time varying, this model might still not be appropriate, and a different method is warranted.
+
+  
+**Lagged models**
+    Bracketing Dampens FE model effects
+    *Need Laura to write this*
+
+----
+
+**Worked Example**
+
+*Setting up the Example Dataset*
+To demonstrate the utility of the preceding solutions, let's setup a dummy model based on a longitudinal study of snail populations at multiple sites based on Figure 1 above. One site is taken per time step per site. Note, the analysis below would be equally relevant if, say, this was a cross-sectional study with multiple samples taken at different locations within each site. In this, we'll stipulate that temperature has a negative effect on demographic snail population abundances via increasing thermal stress, and thus mortality. Recruitment, on the other hand, has a buffering effect by introducting new individuals. We'll also allow for some stochastic variation. The setup is as follows:
+
+- 10 sites  
+- Each site has an average temperature over time drawn from a random normal distribution with a mean of 15 degrees C.
+- Recruitment has the same value - let's say it is for number of snails per square meter - with some error around it with a SD of 3.
+- Sites are sampled over 10 years. 
+- Sites vary from their average using a normal distribution with a SD of 1.
+
+```{r make_data}
+set.seed(nchar("OVB YEAH YOU KNOW ME"))
+
+n_sites <- 10
+n_years <- 10
+mean_temp <- 15
+
+#the basic physical data
+sim_df <- crossing(tibble(site = letters[1:n_sites], 
+                  site_avg_temp = rnorm(n_sites, mean_temp),
+                  recruitment = rnorm(n_sites, site_avg_temp)),
+                  deviation_from_site_avg = rnorm(n_years)) %>%
+  mutate(temp = site_avg_temp + deviation_from_site_avg) %>%
+  arrange(ord = rnorm(n_years*n_sites)) %>% #randomness after crossing
+  group_by(site) %>%
+  mutate(sample_time = 1:n_years) %>%
+  ungroup()
+
+```
+
+We can see that, while the timeseries of predictors at each site looks like we have some warm and some cold sites - and a good bit of variability - when we look at temperature and recruitment, there's a very clear correlation.
+
+```{r}
+temp_tseries <- ggplot(sim_df,
+       aes(x = sample_time,
+           y = temp,
+           color = site)) +
+  geom_line() +
+  guides(color = "none") +
+  xlab("Time") +
+  ylab("Temperature")
+
+temp_rec <- ggplot(sim_df,
+       aes(x = recruitment,
+           y = temp,
+           color = site)) +
+  geom_point()+
+  ylab("Temperature")+
+  xlab("Recruitment")
+
+temp_tseries + temp_rec + plot_layout(guides = "collect")
+```
+
+Finally, let's look at snail densities. For the sake of this model, let's assume at any given time point, snail numbers per square meter are normally distributed with a mean of recruitment minus one third of the temperature and a standard deviation of 1. Note, these numbers were chosen to avoid negative snails. Other distributions could of course be used.
+
+```{r snails}
+beta_temp <- 1/3
+
+sim_df <- sim_df %>%
+  mutate(snails = rnorm(n(),  recruitment - beta_temp*temp))
+```
+
+Now, how do the models laid out above compare in analyzing the effect of temperature on snail abundance? To determine the answer, we fit the above models using either linear models or mixed models fit with maximum likelihood using *lme4* in R. The resulting coefficients are in table COEFTAB. 
+
+```{r snail_mods, message=FALSE, warning=FALSE, fig.cap = "Coefficient of the temperature effect in different models fit to the same data set."}
+library(lme4)
+library(broom)
+
+#calculate differences
+sim_df <- sim_df %>%
+  group_by(site) %>%
+  arrange(sample_time) %>%
+  mutate(delta_temp = temp - lag(temp),
+         delta_snails = snails - lag(snails)) %>%
+  ungroup()
+
+
+#Now, on to models
+ran_mod <- lmer(snails ~ temp + (1|site),
+               data = sim_df,
+               REML = TRUE)
+
+fix_mod <- lm(snails ~ temp + site, data = sim_df)
+ 
+mundlak_mod <- lmer(snails ~ temp + site_avg_temp + (1|site),
+               data = sim_df,
+               REML = FALSE)
+ 
+gmc_mod <- lmer(snails ~ deviation_from_site_avg + site_avg_temp + (1|site),
+               data = sim_df,
+               REML = FALSE) 
+
+diff_mod <- lmer(delta_snails ~ delta_temp + (1|site),
+               data = sim_df,
+               REML = FALSE)
+
+
+res <- bind_rows(tidy(ran_mod),
+          tidy(fix_mod),
+          tidy(mundlak_mod),
+          tidy(gmc_mod),
+          tidy(diff_mod))
+
+res %>% filter(term %in% c("temp", "deviation_from_site_avg", "delta_temp")) %>%
+  mutate(term = c("Naive RE Model", "Fixed Effects Model", 
+                  "Mundlak Device", "Group Mean Centered Model", 
+                  "Difference Model")) %>%
+  rename(Model = term,
+         `Temperature Effect` = estimate,
+         `SE Effect` = std.error) %>%
+  select(-statistic, -group, -p.value) %>%
+  kable() %>%
+  kable_styling(c("bordered", "condensed"))
+```
+  
+From this, three things pop out. First, the naieve random effects model has a coefficient that is well within 2SD of 0. Second, multiple methods accounting for the omitted variable bias perform similarly. Third, the difference method, in this case, seems to have the closest estimate. Note, this model was fit on a slightly different dataset (the response and predictor variables were differences, and lacked one year) - but, like the previous methods, the estimate is not within 2SD of 0. Our conclusions from the naive RE model could likely have been incorrect and driven by omitted variable bias. However, any one of the methods presented above would rectify the situation for this simulated data set.
+
+We provide a Shiny app for the reader to futz with different parameters and see how it could otherwise affect results. <p style="color:red">Jarrett will write</p>.
+
+LAURA, DO WE NEED OTHER EXAMPLES? I WAS GOING TO DO MORE AND PLAY WITH THE COEF, BUT REALIZED THIS WOULD GET TOO LONG, AND A SHINY APP MIGHT BE A BETTER APPROACH TO LET THE READER DO IT THEMSELVES.
+
+**Discussion**
+
+We hope our introduction to thinking about statistical models with observed variable using a causal diagram has shown that, through thinking carefully about biological systems, it is use relatively simple techniques to reduce the problem of observed variable bias. The techniques for reducing observed variable bias are well within the standard statistical toolbox of most modern ecologists. And the results, as seen in at least this one toy example, can be profound for our ability to understand biological systems.
+
+The approach we present here is surely not a panacea. Model mispecification might lead to overconfidence that some omitted variable bias problems have been accounted for by these methods when, in truth, they have not. In particular, not fully reckoning with the way omitted variable correlate with our observed variables of interest can produce models that are subtly misspeciefied - such as thinking that an omitted variable only varies in space, when it varies in both space and time. Moreover, while these methods might aid in accounting for known unknowns, we should always be humble in the face of unkown unknowns. If we are honest with ourselves, there is no full protection from these, other than attempting to ground our work in the blend of theory and natural history that is required for a truly insightful analysis. Accepting that our models are not perfect and that some day, some one will come along with a different one that will produce different conclusions and yield new insights is the cost of doing science. We must embrace creative failure rather than be paralyzed by it. 
+
+Moveover, we feel that the general approach to diagramming systems before attacking them with multiple regression-style approaches not only aids in the omitted variable bias problem, but it serves to reduce bias from multiple other sources. Fitting all variables as predictors without careful thought as to the causal structure of a system can produce many different types of errors of inference (see McElreath Chapter XXX and Pearl XXX for review). While we have long sought for the right statistical technique to determine what variables we should shoehorn into our multiple regression analyses - be it saturated models, stepwise approaches, massive multi-model fits and AIC tables with model averaging, or more arcane statistical incantations - we here show the paramount importance of thinking carefull about a system before trying to divine its secrets. It is a technique that will serve every scientist in every field well.
+
+We hope that this guide serves to provide a ready arrow in the quiver of all scientists - particularly those just beginning to learn how to think about asking and answering questions of biological systems. We have all been there - realizing that an omitted variable might be wreaking havoc with an analysis of hard-won data, feeling the frustration of knowing there is something crucial that you will not be able to measure, or watching a key instrument go up in smoke limiting just what data you are able to collect. Rather than sweep the problem under the rug, we hope that you can now move forward with confidence in coping with what is an undeniably common problem. We look forward to the new insights that these techniques will help you generate.
