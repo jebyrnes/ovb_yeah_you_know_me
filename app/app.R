@@ -50,22 +50,26 @@ ui <- fluidPage(
                         min = 4, max = 100),
             numericInput("ocean_temp", 
                          "Slope of relationship between Oceanography and Temperature",
-                         value = 2),
+                         value = 2,
+                         step = 0.1),
             numericInput("temp_sd", 
                          "SD in Temperature Across Sites",
                          value = 0,
-                         min = 0),
+                         min = 0,
+                         step = 0.01),
             numericInput("temp_mean", 
                          "Resulting Regional Mean in Temperature",
                          value = 15,
                          min = 0),
             numericInput("ocean_recruitment", 
                          "Slope of relationship between Oceanography and Recruitment",
-                         value = -2),
+                         value = -2,
+                         step = 0.1),
             numericInput("recruitment_sd", 
                          "SD in Recruitment Across Sites",
                          value = 0,
-                         min = 0),
+                         min = 0,
+                         step = 0.01),
             numericInput("rec_mean", 
                          "Resulting Regional Mean in Recruitment (#/plot)",
                          value = 15,
@@ -84,16 +88,20 @@ ui <- fluidPage(
             numericInput("plot_temp_sd", 
                          "SD in temperature between plots",
                          value = 1,
-                         min = 0),
+                         min = 0,
+                         step = 0.01),
             numericInput("temp_effect", 
                          "Slope of Relationship Between Temperature and Snails",
-                         value = 1),
+                         value = 1,
+                         step = 0.1),
             numericInput("recruitment_effect", 
                          "Slope of Relationship Between Recruitment and Snails",
-                         value = 1),
+                         value = 1,
+                         step = 0.1),
             numericInput("sd_plot", 
                          "SD of Snails",
-                         value = 3),
+                         value = 3,
+                         step = 0.01),
             br(),br(),
             checkboxInput("use_seed", "Use a seed for repeatable simulation?"),
             
@@ -191,9 +199,16 @@ ui <- fluidPage(
                                  plotOutput("sampled_data")),
                         
                         tabPanel("Temperature Effect on Snails", 
+                                 HTML("These are the coefficients for the relevant term
+                                      in each model that dives the estimated effect of
+                                      temperature on snail abundance. For the GMC model
+                                      this is $x-\\bar{x_j}$ and for the panel model, this 
+                                      is $\\Delta x$"),
                                  tableOutput("coefs")
                         ),
                         tabPanel("Full Model Results", 
+                                 HTML("The coefficients for all models. Compare and
+                                      contrast values for similar terms."),
                                  tableOutput("full_models_out")
                         )
             )
