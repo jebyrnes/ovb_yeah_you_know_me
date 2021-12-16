@@ -112,16 +112,25 @@ ui <- fluidPage(
                         
                         tabPanel("About", 
                                  HTML("This app shows the consqeuences of different model structures
-                                      for the analysis of data contaminated by omitted variable bias. 
-                                      In this system, plots are measured within sites - or sites are measured anually - 
+                                      for the analysis of data contaminated by omitted variable bias. <br><br>
+                                      
+                                      Consider a system (see the system tab) where you are interested in how temperature
+                                      affects snail abundance. However, temperature is driven by oceanography at a site 
+                                      scale, and oceanography also drives recruitment. You have measured neither oceanography
+                                      nor recruitment.<br><br>
+                                      
+                                      In your work, you have measured sites anually (or assessed plots within
+                                      sites in one year - same models - as long as there is variation in temperature between plots!) 
                                       and both temperature and number of snails is recorded. Temperature 
                                       within one replicate is influenced by both site-level average temperature
                                       as well as more immediate varying conditions - i.e., either variation within
-                                      a site or variation across years. <br><br> Snail abundance is influenced both by
-                                      temperature as well as site-level recruitment. However, a. we have no measure
-                                      of site level recruitment and b. site level recruitment and temperature are
-                                      collinear - both are driven by site-level oceanography.
+                                      a site or variation across years. <br><br> 
+                                      
+                                      Snail abundance is influenced both by temperature as well as site-level 
+                                      recruitment. To remind you, a) we have no measure of site level recruitment and 
+                                      b) site level recruitment and temperature are collinear - both are driven by site-level oceanography.
                                       <br><br>
+                                      
                                       The models we use to analyze the data are as follows for year (or plot) i in site j:
                                       
                                       <br><br>
@@ -164,7 +173,9 @@ ui <- fluidPage(
                                       $\\Delta y_{ij} \\sim \\mathcal{N}(\\widehat{\\Delta y_{ij}}, \\sigma^2)$<br>
                                       $\\widehat{\\Delta y_{ij}} = \\beta_0 \\Delta_x{ij} + \\beta_2 + \\mu_j$<br>
                                       $\\mu_j \\sim \\mathcal{N}(0, \\sigma_{site}^2)$<br>
-                                      <br><br>")),
+                                      <br><br>
+                                      
+                                      Code for app is at <a href=https://github.com/jebyrnes/ovb_yeah_you_know_me/tree/master/app>github</a>")),
                         
                         tabPanel("System Diagram",
                                  fluidRow(align="center",
