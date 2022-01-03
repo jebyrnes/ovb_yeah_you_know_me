@@ -92,7 +92,7 @@ analyze_plots <- function(plot_df){
     "Panel", lm(delta_snails ~ delta_temp,data = plot_df)
     
   ) %>%
-    mutate(coefs = map(fit, tidy),
+    mutate(coefs = map(fit, tidy), #get coefficients with broom
            temp_effect = map(coefs, get_temp_coef),
            model_type = fct_inorder(model_type))
   
