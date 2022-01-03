@@ -293,7 +293,7 @@ server <- function(input, output) {
             ts = input$temp_effect,
             rsd = input$recruitment_sd,
             tsd = input$temp_sd,
-            esd = 1,
+            esd = input$sd_plot,
             lsd = input$plot_temp_sd)
         })
         
