@@ -1,0 +1,145 @@
+---
+title: "Evaluating Model Outputs in the face of Omitted Variable Bias"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+#read in helpers
+knitr::read_chunk("scripts/ovb_temp_snail_funs.R")
+source("scripts/ovb_temp_snail_funs.R")
+source("scripts/make_ovb_diagram.R")
+```
+
+## The System and the Study
+
+To evaluate the impact of Omitted Variable Bias (OVB) on different models, consider a system where oceanography drives site temperature and recruitment over time. Temperature also fluctuates over time within each site. Recruitment and temperature influence snail abundance, as do other uncorrelated drivers. You have conducted a study in this system measuring 10 sites, each site sampled once per year over 10 years. In this study, you have recorded snail abundance and temperature. But have no measure of recruitment. Note, the results of models will be the same if you had instead sampled in one year across 10 sites with 10 plots per site if there were plot-level drivers of temperature that behaved the same as below.
+
+To parameterize our simulations, consider the following:  
+
+- Our Oceanography latent variable has a mean of 0 and a SD of 1.  
+- Site temperature is twice the oceanography variable and transformed to have a mean of 15C.  
+- Site recruitment is -2 multiplied by the oceanography variable and transformed to have a mean of 15 individuals per plot.  
+- Sites are sampled over 10 years.  
+- Within a site, the temperature varies over time according to a normal distribution with a mean of 1.  
+- There is a 1:1 relationship between temperature and snail abundance and recruitment and snails.  
+- Other non-correlated drivers in the system influence snail abundance with a mean influence of 0 and a SD of 1.
+
+Thus, the system looks like this:
+
+```{r system, echo = FALSE}
+         make_snail_graph( 
+            or = -2,
+            ot = 2,
+            rs = 1,
+            ts = 1,
+            rsd = 0,
+            tsd = 0,
+            esd = 3,
+            lsd = 1)
+```
+
+## Functions to Create The System
+
+To simulated data, let's begin by loading some libraries
+```{r libraries_for_simulations}
+```
+
+Next, we need a function that will create a template of simulated sites based on oceanography and the sampling design described above.
+
+```{r make_environment_function}
+```
+
+Great. Now, we need to add that year-to-year or plot-to-plot variability.
+
+```{r make_plots_function}
+```
+
+To analyze our data, we will compare several different fit models.
+
+- A naive linear model with no site term  
+- A random effects using site as a random intercept  
+- A fixed effects model where site is a fixed effect (i.e., turned into 1/0 dummy variables)  
+- A model where we include the site mean temperature as a covariate and site is a random effect  
+- A model where we include site mean temperature as a covariate and site mean centered temperature (i.e., tempature at a site in a year minus it's mean over the entire dataset). Site is included as a random effect  
+- A panel model where we look at change in snails between years versus change in temperature between years with a random site effect
+
+```{r analyze_plots_function}
+```
+
+## Simulations and Results
+
+Let's begin by setting up 100 replicate simulations.
+
+```{r envt_sims}
+set.seed(31415)
+n_sims <- 100
+
+envt <- tibble(
+  sims = 1:n_sims
+) %>%
+  mutate(sites = map(sims, ~make_environment())) 
+```
+
+
+Just for a sanity check, here's the relationship between temperature and recruitment at the site level across all simulations.
+
+```{r plot_sites}
+ggplot(envt %>%
+         unnest(sites),
+       aes(x = site_temp, y = site_recruitment, group = sims)) +
+  geom_point(alpha = 0.4, color = 'grey') +
+  stat_smooth(method = "lm", size = 0.5, alpha = 0.5,
+              fill = NA, color = "black")
+```
+
+Great! Now, let's setup our sampling over time. 
+
+```{r sampling}
+plots_df <- envt %>%
+  mutate(site_year = map(sites, make_plots))
+```
+
+And, again, a sanity check...
+
+```{r plot_plots}
+ggplot(plots_df %>%
+         unnest(site_year),
+       aes(x = plot_temp, y = snails, color = site)) +
+  geom_point(alpha = 0.5)
+```
+
+So we can see that in this setup, the snail-temperature relationship is positive. But, how positive is it? What would our coefficients show?
+
+Let's fit models to each set of data
+
+```{r analyze_sims, warning = FALSE, message = FALSE}
+analysis_df <- plots_df %>%
+  mutate(analysis = map(site_year, analyze_plots)) %>%
+  unnest(analysis)
+```
+
+And now let's look at the distribution of coefficients that would describe the relationship between temperature and snails from each mode.
+
+
+```{r ridges}
+analysis_df %>%
+  unnest(temp_effect) %>%
+  ggplot(aes(y = fct_rev(model_type), x = estimate)) +
+  ggridges::stat_density_ridges() +
+  labs(y="")
+```
+
+Eyeballing it, we can see of course the naive model is too low. How bad is the bias for the RE model?
+
+```{r tab}
+analysis_df %>%
+  unnest(temp_effect) %>%
+  group_by(model_type) %>%
+  summarize(mean_estimate = mean(estimate),
+            sd_estimate = sd(estimate))
+```
+
+The downward bias produced by poor model choice is clear.
