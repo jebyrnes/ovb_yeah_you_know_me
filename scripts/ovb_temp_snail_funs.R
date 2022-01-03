@@ -84,7 +84,7 @@ analyze_plots <- function(plot_df){
   
   m <-  tribble(
     ~model_type, ~fit,
-    "Naieve", lm(snails ~ plot_temp, data = plot_df),
+    "Naive", lm(snails ~ plot_temp, data = plot_df),
     "RE", lmer(snails ~ plot_temp + (1|site), data = plot_df),
     "FE", lm(snails ~ plot_temp + site, data = plot_df),
     "Group Mean Covariate", lmer(snails ~ plot_temp + site_mean_temp + (1|site), data = plot_df),
