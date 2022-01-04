@@ -87,12 +87,13 @@ analyze_plots <- function(plot_df){
     "FE", lm(snails ~ plot_temp + site, data = plot_df),
     "Group Mean Covariate", lmer(snails ~ plot_temp + site_mean_temp + (1|site), data = plot_df),
     "Group Mean Centered", lmer(snails ~ plot_temp_dev + site_mean_temp + (1|site), data = plot_df),
-    #"Group Mean Covariate, no RE", lm(snails ~ plot_temp + site_mean_temp, data = plot_df),
-    #"Group Mean Centered, no RE", lm(snails ~ plot_temp_dev + site_mean_temp, data = plot_df),
+    "Group Mean Covariate, no RE", lm(snails ~ plot_temp + site_mean_temp, data = plot_df),
+    "Group Mean Centered, no RE", lm(snails ~ plot_temp_dev + site_mean_temp, data = plot_df),
     "Panel", lm(delta_snails ~ delta_temp,data = plot_df)
     
   ) %>%
     mutate(coefs = map(fit, tidy), #get coefficients with broom
+           out_stats = map(fit, glance),
            temp_effect = map(coefs, get_temp_coef),
            model_type = fct_inorder(model_type))
   

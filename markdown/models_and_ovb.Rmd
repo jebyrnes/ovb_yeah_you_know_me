@@ -169,7 +169,7 @@ Both are the same - but both are not distinguishable from 0 (indeed, you'd see s
 
 Why is that?
 
-In the system we have setup, there is no uncorrelated site-level variability. It's all at the site-year (or site-plot) level. We could indeed run these models with *no site random effect*. They would produce the same answers. (You will notice they are commented out in the above code. Add them back in and see for your own edification).
+In the system we have setup, there is no uncorrelated site-level variability. It's all at the site-year (or site-plot) level. We have indeed run these models with *no site random effect*. They  produce the same answers. 
 
 So should we just not worry about a site-level random effect? No. That's because in the simulations above, we have not allowed for variation at the site level that is independent of oceanography. We can change this. In the simulation code above, we can add variation in recruitment or site mean temperature due to forces other than oceanography by tweaking their SD. If we do this with site temperature, this should merely aid in the estimation of our coefficient for the temperature effect, as it's adding temperature variability that is uncorrelated with recruitment.
 
@@ -218,3 +218,16 @@ rec_var_df %>%
 ```
 
 This means that we can now look at residual variation due to between site differences as well as residual replicate-level variation. Further, while models without a site random effect can be fit and used, these models will be structurally incorrect - replicates are not IID, as there is correlated error within sites.
+
+Practically, the difference comes in with respect to whether you are interested in between site variation or not. The residual inflates with no RE, as it is now the combination of between site residual and within site residual terms. This could make a difference for various statistical tests down the line as well, but in terms of parameter estimates, we are still estimating a clean causal effect.
+
+```{r site_mean_rec}
+rec_var_df %>%
+  filter(grepl("Group Mean", model_type)) %>%
+  unnest(out_stats) %>%
+  group_by(model_type) %>%
+  summarize(mean_sigma = mean(sigma),
+            sd_sigma = sd(sigma)) %>%
+  ungroup()
+```
+
