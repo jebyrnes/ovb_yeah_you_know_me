@@ -143,3 +143,78 @@ analysis_df %>%
 ```
 
 The downward bias produced by poor model choice is clear.
+
+## A Wrapper Function for Simulation
+
+This has been useful, but, if we want to automate the process for further exploration, let's wrap the code above into a function.
+
+```{r sim_wrapper_function}
+```
+
+## Is that Random Effect Needed?
+
+If we look at the Group Mean Centered and Group Mean Centered model, what's the RE?
+
+```{r re_check}
+analysis_df %>%
+  filter(model_type %in% c("Group Mean Covariate", "Group Mean Centered")) %>%
+  unnest(coefs) %>%
+  filter(group == "site") %>%
+  group_by(model_type, term) %>%
+  summarize(mean_site_sd = mean(estimate),
+            sd_site_sd = sd(estimate))
+```
+
+Both are the same - but both are not distinguishable from 0 (indeed, you'd see some warnings above if you changed the warnings option in this markdown).
+
+Why is that?
+
+In the system we have setup, there is no uncorrelated site-level variability. It's all at the site-year (or site-plot) level. We could indeed run these models with *no site random effect*. They would produce the same answers. (You will notice they are commented out in the above code. Add them back in and see for your own edification).
+
+So should we just not worry about a site-level random effect? No. That's because in the simulations above, we have not allowed for variation at the site level that is independent of oceanography. We can change this. In the simulation code above, we can add variation in recruitment or site mean temperature due to forces other than oceanography by tweaking their SD. If we do this with site temperature, this should merely aid in the estimation of our coefficient for the temperature effect, as it's adding temperature variability that is uncorrelated with recruitment.
+
+Instead, we can add non-oceanography-driven variation via recruitment. let's assume that there is additional variation in average site recruitment that is uncorrelated with oceanography. This is one way site-level variability that is not correlated with oceanography. Now, using our new function that ties the room together, let's create some new analyses where there is an additional SD of 1 in recruitment and look at the RE.
+
+```{r add_rec_var}
+rec_var_df <- make_sims_and_analyze(recruitment_sd = 1)
+```
+
+You can now see that the temp-recruitment relationship has some wiggle.
+
+```{r rec_plot_sites}
+ggplot(rec_var_df %>%
+         group_by(sims) %>%
+         slice(1L) %>%
+         ungroup() %>%
+         unnest(sites),
+       aes(x = site_temp, y = site_recruitment, group = sims)) +
+  geom_point(alpha = 0.4, color = 'grey') +
+  stat_smooth(method = "lm", size = 0.5, alpha = 0.5,
+              fill = NA, color = "black")
+```
+
+The models with omitted variable bias still outperform those without.
+
+```{r rec_var_ovb}
+rec_var_df %>%
+    unnest(temp_effect) %>%
+    group_by(model_type) %>%
+    summarize(mean_estimate = mean(estimate),
+              sd_estimate = sd(estimate))
+```
+
+But the difference is not as pronounced due to the weakening of the correlation between temperature and recruitment. However, the site RE is now clearly not 0.
+
+```{r re_rec}
+
+rec_var_df %>%
+  filter(model_type %in% c("Group Mean Covariate", "Group Mean Centered")) %>%
+  unnest(coefs) %>%
+  filter(group == "site") %>%
+  group_by(model_type, term) %>%
+  summarize(mean_site_sd = mean(estimate),
+            sd_site_sd = sd(estimate))
+
+```
+
+This means that we can now look at residual variation due to between site differences as well as residual replicate-level variation. Further, while models without a site random effect can be fit and used, these models will be structurally incorrect - replicates are not IID, as there is correlated error within sites.

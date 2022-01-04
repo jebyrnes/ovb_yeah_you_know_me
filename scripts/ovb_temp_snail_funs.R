@@ -46,7 +46,7 @@ make_plots <- function(sites_df,
                        plot_temp_sd = 1,
                        temp_effect = 1,
                        recruitment_effect = 1,
-                       sd_plot = 3,
+                       sd_plot = 1,
                        seed = NULL){
   
   if(!is.null(seed)) set.seed(seed)
@@ -80,8 +80,6 @@ make_plots <- function(sites_df,
 
 analyze_plots <- function(plot_df){
   
-  # plot_df <- plots_df$plots[[3]] 
-  
   m <-  tribble(
     ~model_type, ~fit,
     "Naive", lm(snails ~ plot_temp, data = plot_df),
@@ -89,6 +87,8 @@ analyze_plots <- function(plot_df){
     "FE", lm(snails ~ plot_temp + site, data = plot_df),
     "Group Mean Covariate", lmer(snails ~ plot_temp + site_mean_temp + (1|site), data = plot_df),
     "Group Mean Centered", lmer(snails ~ plot_temp_dev + site_mean_temp + (1|site), data = plot_df),
+    #"Group Mean Covariate, no RE", lm(snails ~ plot_temp + site_mean_temp, data = plot_df),
+    #"Group Mean Centered, no RE", lm(snails ~ plot_temp_dev + site_mean_temp, data = plot_df),
     "Panel", lm(delta_snails ~ delta_temp,data = plot_df)
     
   ) %>%
@@ -103,4 +103,61 @@ get_temp_coef <- function(a_tidy_frame){
   a_tidy_frame %>%
     filter(term %in% c("plot_temp", "plot_temp_dev", "delta_temp")) %>%
     select(estimate, std.error)
+}
+
+
+## ---- sim_wrapper_function --------
+
+
+
+make_sims_and_analyze <- function(n_sims = 100,
+                                  n_sites = 10,
+                                  ocean_temp = 2,
+                                  temp_sd = 0,
+                                  ocean_recruitment = -2,
+                                  recruitment_sd = 0,
+                                  temp_mean = 15,
+                                  rec_mean = 100,
+                                  n_plots_per_site = 10,
+                                  plot_temp_sd = 1,
+                                  temp_effect = 1,
+                                  recruitment_effect = 1,
+                                  sd_plot = 1,
+                                  seed = NULL) {
+  #should we set a seed?
+  if (!is.null(seed))
+    set.seed(seed)
+  
+  # make an envt data frame
+  out_df <- tibble(sims = 1:n_sims) %>%
+    mutate(
+      sites = map(
+        sims,
+        make_environment,
+        n_sites = n_sites,
+        ocean_temp = ocean_temp,
+        temp_sd = temp_sd,
+        ocean_recruitment = ocean_recruitment,
+        recruitment_sd = recruitment_sd,
+        temp_mean = temp_mean,
+        rec_mean = rec_mean
+      )
+    ) %>%
+    #now add plots
+    mutate(
+      site_year = map(
+        sites,
+        make_plots,
+        n_plots_per_site = n_plots_per_site,
+        plot_temp_sd = plot_temp_sd,
+        temp_effect = temp_effect,
+        recruitment_effect = recruitment_effect,
+        sd_plot = sd_plot
+      )
+    ) %>%
+    
+    #and analysis
+    mutate(analysis = map(site_year, analyze_plots)) %>%
+    unnest(analysis)
+  
 }
