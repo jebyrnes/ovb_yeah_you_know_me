@@ -37,7 +37,7 @@ Thus, the system looks like this:
             ts = 1,
             rsd = 0,
             tsd = 0,
-            esd = 3,
+            esd = 1,
             lsd = 1)
 ```
 
@@ -63,7 +63,7 @@ To analyze our data, we will compare several different fit models.
 - A random effects using site as a random intercept  
 - A fixed effects model where site is a fixed effect (i.e., turned into 1/0 dummy variables)  
 - A model where we include the site mean temperature as a covariate and site is a random effect  
-- A model where we include site mean temperature as a covariate and site mean centered temperature (i.e., tempature at a site in a year minus it's mean over the entire dataset). Site is included as a random effect  
+- A model where we include site mean temperature as a covariate and site mean centered temperature (i.e., temperature at a site in a year minus it's mean over the entire data set). Site is included as a random effect  
 - A panel model where we look at change in snails between years versus change in temperature between years with a random site effect
 
 ```{r analyze_plots_function}
