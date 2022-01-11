@@ -231,3 +231,41 @@ rec_var_df %>%
   ungroup()
 ```
 
+## What About Unbalanced Data?
+
+One of the advantages to mixed modeling approaches is how they handle unbalanced data. What if, in the above example, we had lost samples from each site generating unbalanced data?
+
+```{r}
+set.seed(31415)
+#what do we keep?
+years_to_keep <- round(runif(10, 3, 10)) %>%
+    imap_dfr( ~ tibble(site = as.character(.y), 
+                       year = sample(1:10, .x),
+                       keep = T))
+
+#a function for unbalancing
+unbalance <- function(site_year_df, keep_df){
+  left_join(site_year_df, keep_df) %>%
+    filter(keep) 
+}
+
+#apply keeping to each site-year
+unbalanced_df <- rec_var_df %>% 
+  select(-model_type, -fit, -coefs, -out_stats, -temp_effect) %>%
+  mutate(site_year = map(site_year, unbalance, 
+                            keep_df = years_to_keep),
+         analysis = map(site_year, analyze_plots)) %>%
+    unnest(analysis)  
+```
+
+How does this lack of balance affect estimation of causal coefficients?
+
+```{r unbalanced_ovb}
+unbalanced_df %>%
+    unnest(temp_effect) %>%
+    group_by(model_type) %>%
+    summarize(mean_estimate = mean(estimate),
+              sd_estimate = sd(estimate))
+```
+
+We can see that point estimation here is improved somewhat. Although this could vary. More telling would be an exporation of those group means in the mixed versus fixed models. 
