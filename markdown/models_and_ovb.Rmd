@@ -19,7 +19,8 @@ source("scripts/make_ovb_diagram.R")
 knit_table <- function(a_tab){
   a_tab %>%
     knitr::kable(digits = 3) %>%
-    kableExtra::kable_classic_2()
+    kableExtra::kable_classic_2() %>%
+    kableExtra::kable_styling(full_width = F)
 }
 ```
 
@@ -157,7 +158,65 @@ analysis_df %>%
   knit_table
 ```
 
-The downward bias produced by poor model choice is clear.
+The downward bias produced by poor model choice is clear. We can see it if we plot 1 minus the coefficient
+
+```{r bias_plot}
+analysis_df %>%
+  unnest(temp_effect) %>%
+  ggplot(aes(y = fct_rev(model_type), x = 1- estimate)) +
+  ggridges::stat_density_ridges() +
+  labs(y="", x = "Bias")
+```
+
+We can also look at the distribution of, for each simulated data set, how different is the RE model from each other model.
+
+```{r diff_from_re_plot}
+analysis_df %>%
+  filter(model_type != "Naive") %>%
+  unnest(temp_effect) %>%
+  group_by(sims) %>%
+  mutate(diff_from_re = estimate - estimate[1]) %>%
+  ungroup() %>%
+  filter(model_type != "RE") %>%
+  ggplot(aes(y = fct_rev(model_type), x = diff_from_re)) +
+  ggridges::stat_density_ridges() +
+  labs(y="", x = "Model Estimated Temperature Effect")
+```
+
+
+Note, in all cases, we can see the effects of downward bias. This is clear, but, to put it in numbers - 
+
+```{r diff_from_re}
+analysis_df %>%
+  filter(model_type != "Naive") %>%
+  unnest(temp_effect) %>%
+  group_by(sims) %>%
+  mutate(diff_from_re = estimate - estimate[1]) %>%
+  ungroup() %>%
+  filter(model_type != "RE") %>%
+  group_by(model_type) %>%
+  summarize(`Mean Diff from RE` = mean(diff_from_re),
+            `SD Diff from RE` = sd(diff_from_re))  %>%
+  knit_table
+```
+
+
+If we were doing straight hypothesis testing, how often would our estimate of the temperature coefficient either overlap 0 or not have 1 within its confidence interval?
+
+```{r overlap_0_1}
+analysis_df %>%
+  filter(model_type != "Naive") %>%
+  unnest(temp_effect) %>%
+  mutate(overlap_0 = (estimate - 2*std.error)<0,
+         overlap_1 = (estimate - 2*std.error)<1 &
+           (estimate + 2*std.error)>1) %>%
+  group_by(`Model Type` = model_type) %>%
+  summarize(`95% CI Contains 0` = sum(overlap_0)/n(),
+            `95% CI does Not Contain 1` = (n()-sum(overlap_1))/n()) %>%
+  knit_table
+```
+
+Here we see the RE model, while rarely, can be subject to type II error. Further, it is far more likely than any other technique to not have the true coefficient value within 2 CI of its estimand.
 
 ## A Wrapper Function for Simulation
 
