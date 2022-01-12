@@ -1,10 +1,14 @@
 ---
 title: "Evaluating Model Outputs in the face of Omitted Variable Bias"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 knitr::opts_knit$set(root.dir = here::here())
 
 #read in helpers
