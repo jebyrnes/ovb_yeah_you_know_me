@@ -15,6 +15,12 @@ knitr::opts_knit$set(root.dir = here::here())
 knitr::read_chunk("scripts/ovb_temp_snail_funs.R")
 source("scripts/ovb_temp_snail_funs.R")
 source("scripts/make_ovb_diagram.R")
+
+knit_table <- function(a_tab){
+  a_tab %>%
+    knitr::kable(digits = 3) %>%
+    kableExtra::kable_classic_2()
+}
 ```
 
 ## The System and the Study
@@ -126,7 +132,7 @@ Let's fit models to each set of data
 ```{r analyze_sims, warning = FALSE, message = FALSE}
 analysis_df <- plots_df %>%
   mutate(analysis = map(site_year, analyze_plots)) %>%
-  unnest(analysis)
+  unnest(analysis) 
 ```
 
 And now let's look at the distribution of coefficients that would describe the relationship between temperature and snails from each mode.
@@ -145,9 +151,10 @@ Eyeballing it, we can see of course the naive model is too low. How bad is the b
 ```{r tab}
 analysis_df %>%
   unnest(temp_effect) %>%
-  group_by(model_type) %>%
-  summarize(mean_estimate = mean(estimate),
-            sd_estimate = sd(estimate))
+  group_by(`Model Type` = model_type) %>%
+  summarize(`Mean Estimate` = mean(estimate),
+            `SD Estimate` = sd(estimate)) %>%
+  knit_table
 ```
 
 The downward bias produced by poor model choice is clear.
@@ -168,9 +175,11 @@ analysis_df %>%
   filter(model_type %in% c("Group Mean Covariate", "Group Mean Centered")) %>%
   unnest(coefs) %>%
   filter(group == "site") %>%
-  group_by(model_type, term) %>%
-  summarize(mean_site_sd = mean(estimate),
-            sd_site_sd = sd(estimate))
+  group_by(`Model Type` = model_type) %>%
+  summarize(Term = "Site Random Effect",
+            `Mean Site SD` = mean(estimate),
+            `SD in Site SD` = sd(estimate)) %>%
+  knit_table
 ```
 
 Both are the same - but both are not distinguishable from 0 (indeed, you'd see some warnings above if you changed the warnings option in this markdown).
@@ -208,9 +217,10 @@ The models with omitted variable bias still outperform those without.
 ```{r rec_var_ovb}
 rec_var_df %>%
     unnest(temp_effect) %>%
-    group_by(model_type) %>%
-    summarize(mean_estimate = mean(estimate),
-              sd_estimate = sd(estimate))
+  group_by(`Model Type` = model_type) %>%
+  summarize(`Mean Estimate` = mean(estimate),
+            `SD Estimate` = sd(estimate)) %>%
+  knit_table
 ```
 
 But the difference is not as pronounced due to the weakening of the correlation between temperature and recruitment. However, the site RE is now clearly not 0.
@@ -221,9 +231,11 @@ rec_var_df %>%
   filter(model_type %in% c("Group Mean Covariate", "Group Mean Centered")) %>%
   unnest(coefs) %>%
   filter(group == "site") %>%
-  group_by(model_type, term) %>%
-  summarize(mean_site_sd = mean(estimate),
-            sd_site_sd = sd(estimate))
+  group_by(`Model Type` = model_type) %>%
+  summarize(Term = "Site Random Effect",
+            `Mean Site SD` = mean(estimate),
+            `SD in Site SD` = sd(estimate)) %>%
+  knit_table
 
 ```
 
@@ -235,10 +247,11 @@ Practically, the difference comes in with respect to whether you are interested 
 rec_var_df %>%
   filter(grepl("Group Mean", model_type)) %>%
   unnest(out_stats) %>%
-  group_by(model_type) %>%
-  summarize(mean_sigma = mean(sigma),
-            sd_sigma = sd(sigma)) %>%
-  ungroup()
+  group_by(`Model Type` = model_type) %>%
+  summarize(`Mean Residual SD` = mean(sigma),
+            `SD in Residual SD` = sd(sigma)) %>%
+  ungroup() %>%
+  knit_table
 ```
 
 ## What About Unbalanced Data?
@@ -273,9 +286,10 @@ How does this lack of balance affect estimation of causal coefficients?
 ```{r unbalanced_ovb}
 unbalanced_df %>%
     unnest(temp_effect) %>%
-    group_by(model_type) %>%
-    summarize(mean_estimate = mean(estimate),
-              sd_estimate = sd(estimate))
+  group_by(`Model Type` = model_type) %>%
+  summarize(`Mean Estimate` = mean(estimate),
+            `SD Estimate` = sd(estimate)) %>%
+  knit_table
 ```
 
 We can see that point estimation here is improved somewhat. Although this could vary. More telling would be an exporation of those group means in the mixed versus fixed models. 
