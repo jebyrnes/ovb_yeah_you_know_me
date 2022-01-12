@@ -6,6 +6,8 @@ library(broom.mixed)
 library(DiagrammeR)
 library(glue)
 
+theme_set(theme_bw(base_size = 14))
+
 ## ---- notes --------
 
 # The structure of the system
@@ -22,7 +24,7 @@ make_environment <- function(n_sites = 10,
                              ocean_recruitment = -2,
                              recruitment_sd = 0,
                              temp_mean = 15,
-                             rec_mean = 100,
+                             rec_mean = 10,
                              seed = NULL){
   
   if(!is.null(seed)) set.seed(seed)

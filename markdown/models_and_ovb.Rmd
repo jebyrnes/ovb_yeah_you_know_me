@@ -96,7 +96,9 @@ ggplot(envt %>%
        aes(x = site_temp, y = site_recruitment, group = sims)) +
   geom_point(alpha = 0.4, color = 'grey') +
   stat_smooth(method = "lm", size = 0.5, alpha = 0.5,
-              fill = NA, color = "black")
+              fill = NA, color = "black") +
+  labs(x = "Site Average Temperature", 
+       y = "Site Recruitment of Individuals Per Plot")
 ```
 
 Great! Now, let's setup our sampling over time. 
@@ -112,7 +114,9 @@ And, again, a sanity check...
 ggplot(plots_df %>%
          unnest(site_year),
        aes(x = plot_temp, y = snails, color = site)) +
-  geom_point(alpha = 0.5)
+  geom_point(alpha = 0.5)+
+  labs(x = "Plot Temperature",
+       y = "Snails per Plot")
 ```
 
 So we can see that in this setup, the snail-temperature relationship is positive. But, how positive is it? What would our coefficients show?
@@ -133,7 +137,7 @@ analysis_df %>%
   unnest(temp_effect) %>%
   ggplot(aes(y = fct_rev(model_type), x = estimate)) +
   ggridges::stat_density_ridges() +
-  labs(y="")
+  labs(y="", x = "Model Estimated Temperature Effect")
 ```
 
 Eyeballing it, we can see of course the naive model is too low. How bad is the bias for the RE model?
@@ -194,7 +198,9 @@ ggplot(rec_var_df %>%
        aes(x = site_temp, y = site_recruitment, group = sims)) +
   geom_point(alpha = 0.4, color = 'grey') +
   stat_smooth(method = "lm", size = 0.5, alpha = 0.5,
-              fill = NA, color = "black")
+              fill = NA, color = "black")+
+  labs(x = "Site Average Temperature", 
+       y = "Site Recruitment of Individuals Per Plot")
 ```
 
 The models with omitted variable bias still outperform those without.
