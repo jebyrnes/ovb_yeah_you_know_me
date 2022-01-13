@@ -15,9 +15,9 @@ library(broom)
 library(broom.mixed)
 library(DiagrammeR)
 theme_set(theme_bw(base_size = 18))
-
-source("ovb_temp_snail_funs.R")
-source("make_ovb_diagram.R")
+setwd(here::here())
+source("scripts/ovb_temp_snail_funs.R")
+source("scripts/make_ovb_diagram.R")
 
 # Define UI for application that draws a histogram
 # Define UI for random distribution app ----
