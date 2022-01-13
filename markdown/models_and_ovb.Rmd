@@ -180,7 +180,7 @@ analysis_df %>%
   filter(model_type != "RE") %>%
   ggplot(aes(y = fct_rev(model_type), x = diff_from_re)) +
   ggridges::stat_density_ridges() +
-  labs(y="", x = "Model Estimated Temperature Effect")
+  labs(y="", x = "Difference from RE Model\nTemperature Effect")
 ```
 
 
