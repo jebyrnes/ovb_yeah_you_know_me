@@ -136,14 +136,14 @@ make_sims_and_analyze <- function(n_sims = 100,
     mutate(
       sites = map(
         sims,
-        make_environment,
-        n_sites = n_sites,
-        ocean_temp = ocean_temp,
-        temp_sd = temp_sd,
-        ocean_recruitment = ocean_recruitment,
-        recruitment_sd = recruitment_sd,
-        temp_mean = temp_mean,
-        rec_mean = rec_mean
+        ~make_environment(
+         n_sites = n_sites,
+          ocean_temp = ocean_temp,
+          temp_sd = temp_sd,
+          ocean_recruitment = ocean_recruitment,
+          recruitment_sd = recruitment_sd,
+          temp_mean = temp_mean,
+          rec_mean = rec_mean)
       )
     ) %>%
     #now add plots
