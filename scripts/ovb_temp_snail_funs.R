@@ -25,6 +25,7 @@ make_environment <- function(n_sites = 10,
                              recruitment_sd = 0,
                              temp_mean = 15,
                              rec_mean = 10,
+                             site_sd = 1,
                              seed = NULL){
   
   if(!is.null(seed)) set.seed(seed)
@@ -36,7 +37,8 @@ make_environment <- function(n_sites = 10,
       site_temp = temp_mean + 
         rnorm(n_sites, ocean_temp * oceanography, temp_sd),
       site_recruitment = rec_mean +
-        rnorm(n_sites, ocean_recruitment * oceanography, recruitment_sd)
+        rnorm(n_sites, ocean_recruitment * oceanography, recruitment_sd),
+      site_int = rnorm(n_sites, 0, sd = site_sd)
       
     )
 }
@@ -48,7 +50,7 @@ make_plots <- function(sites_df,
                        plot_temp_sd = 1,
                        temp_effect = 1,
                        recruitment_effect = 1,
-                       sd_plot = 1,
+                       sd_plot = 2,
                        seed = NULL){
   
   if(!is.null(seed)) set.seed(seed)
@@ -63,7 +65,8 @@ make_plots <- function(sites_df,
       plot_temp = site_temp + plot_temp_dev_actual,
       snails = rnorm(n(),
                      temp_effect*plot_temp +
-                       recruitment_effect*site_recruitment,
+                       recruitment_effect*site_recruitment +
+                       site_int,
                      sd_plot)) %>%
     ungroup() %>%
     group_by(site) %>%
@@ -122,11 +125,12 @@ make_sims_and_analyze <- function(n_sims = 100,
                                   recruitment_sd = 0,
                                   temp_mean = 15,
                                   rec_mean = 10,
+                                  site_sd = 1,
                                   n_plots_per_site = 10,
                                   plot_temp_sd = 1,
                                   temp_effect = 1,
                                   recruitment_effect = 1,
-                                  sd_plot = 1,
+                                  sd_plot = 2,
                                   seed = NULL) {
   #should we set a seed?
   if (!is.null(seed))
@@ -144,7 +148,8 @@ make_sims_and_analyze <- function(n_sims = 100,
           ocean_recruitment = ocean_recruitment,
           recruitment_sd = recruitment_sd,
           temp_mean = temp_mean,
-          rec_mean = rec_mean)
+          rec_mean = rec_mean,
+          site_sd = site_sd)
       )
     ) %>%
     #now add plots
