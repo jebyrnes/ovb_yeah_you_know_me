@@ -79,7 +79,11 @@ ui <- fluidPage(
                          "Resulting Regional Mean in Recruitment (#/plot)",
                          value = 15,
                          min = 0),
-
+            numericInput("site_sd", 
+                         "SD of Additional Uncorrelated Site Variation ",
+                         value = 1,
+                         min = 0),
+            
             # br() element to introduce extra vertical spacing ----
             br(), br(),
             
@@ -160,7 +164,13 @@ ui <- fluidPage(
                                       $\\mu_j \\sim \\mathcal{N}(0, \\sigma_{site}^2)$<br>
 
                                       <br><br>
-                                      <b>FE model</b>: <br>
+                                      <b>FE Mean Differenced model</b>: <br>
+                                      <code>lm(y_dev_from_site_mean ~ x_dev_from_site_mean)</code><br>
+                                      $y_{ij} - \\bar{y_i} \\sim \\mathcal{N}(\\widehat{y_{ij} - \\bar{y_i}}, \\sigma^2)$<br>
+                                      $\\widehat{y_{ij} - \\bar{y_i}} =  \\beta_1 (x_{ij} - \\bar{x_i})$<br>
+
+                                      <br><br>
+                                      <b>FE Dummy Variables model</b>: <br>
                                       <code>lm(y ~ x + site)</code><br>
                                       $y_i \\sim \\mathcal{N}(\\widehat{y_i}, \\sigma^2)$<br>
                                       $\\widehat{y_ij} = \\beta_0 x_{1ij} + \\sum_{k=1}^{j} \\beta_k x_{2ij}$<br>
@@ -182,10 +192,9 @@ ui <- fluidPage(
                                       
                                       <br><br>
                                       <b>Panel model</b> - assumed 1 measurement per site per year: <br>
-                                      <code>lmer(delta_y ~ delta_x + (1|site))</code><br>
+                                      <code>lm(delta_y ~ delta_x)</code><br>
                                       $\\Delta y_{ij} \\sim \\mathcal{N}(\\widehat{\\Delta y_{ij}}, \\sigma^2)$<br>
-                                      $\\widehat{\\Delta y_{ij}} = \\beta_0 \\Delta_x{ij} + \\beta_2 + \\mu_j$<br>
-                                      $\\mu_j \\sim \\mathcal{N}(0, \\sigma_{site}^2)$<br>
+                                      $\\widehat{\\Delta y_{ij}} = \\beta_0 \\Delta_x{ij} + \\beta_2$<br>
                                       <br><br>
                                       
                                       Code for app is at <a href=https://github.com/jebyrnes/ovb_yeah_you_know_me/tree/master/app>github</a>")),
@@ -264,6 +273,7 @@ server <- function(input, output) {
                 recruitment_sd = input$recruitment_sd,
                 temp_mean = input$temp_mean,
                 rec_mean = input$rec_mean,
+                site_sd = input$site_sd,
                 n_plots_per_site = input$n_plots_per_site,
                 plot_temp_sd = input$plot_temp_sd,
                 temp_effect = input$temp_effect,
@@ -329,6 +339,7 @@ server <- function(input, output) {
             ts = input$temp_effect,
             rsd = input$recruitment_sd,
             tsd = input$temp_sd,
+            ssd = input$site_sd,
             esd = input$sd_plot,
             lsd = input$plot_temp_sd)
         })

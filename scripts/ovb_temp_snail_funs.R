@@ -71,7 +71,9 @@ make_plots <- function(sites_df,
     ungroup() %>%
     group_by(site) %>%
     mutate(year = 1:n(),
+           site_mean_snails = mean(snails),
            site_mean_temp = mean(plot_temp),
+           plot_snail_dev = snails - site_mean_snails,
            plot_temp_dev = plot_temp - site_mean_temp,
            site_mean_snail = mean(snails),
            site_snail_dev = snails - mean(snails),
@@ -89,8 +91,8 @@ analyze_plots <- function(plot_df){
     ~model_type, ~fit,
     "Naive", lm(snails ~ plot_temp, data = plot_df),
     "RE", lmer(snails ~ plot_temp + (1|site), data = plot_df),
+    "FE Using Mean Differencing", lm(plot_snail_dev ~ plot_temp_dev, data = plot_df), #fix SE?
     "FE with Dummy Variables", lm(snails ~ plot_temp + site, data = plot_df),
-    "FE Using Mean Differencing", lm(snails ~ plot_temp + site, data = plot_df), #fix SE?
     "Group Mean Covariate", lmer(snails ~ plot_temp + site_mean_temp + (1|site), data = plot_df),
     "Group Mean Centered", lmer(snails ~ plot_temp_dev + site_mean_temp + (1|site), data = plot_df),
     "Group Mean Covariate, no RE", lm(snails ~ plot_temp + site_mean_temp, data = plot_df),
