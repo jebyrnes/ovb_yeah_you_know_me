@@ -19,8 +19,7 @@ setwd(here::here())
 source("scripts/ovb_temp_snail_funs.R")
 source("scripts/make_ovb_diagram.R")
 
-# Define UI for application that draws a histogram
-# Define UI for random distribution app ----
+# Define UI for application 
 ui <- fluidPage(
     title = "Exploring OVB with Snails",
     withMathJax(),
