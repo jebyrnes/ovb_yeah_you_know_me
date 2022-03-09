@@ -1,11 +1,10 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+#' ----------------------------------------------------------------------------
+#' 
+#' Shiny app for Byrnes and Dee simulations of Omitted Variable Bias
+#' and its consequences for different model types.
+#' 
+#' 
+#' ----------------------------------------------------------------------------
 
 library(shiny)
 
