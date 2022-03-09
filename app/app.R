@@ -1,11 +1,11 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+#' ----------------------------------------------------------------------------
+#' 
+#' Shiny app for Byrnes and Dee single simulation of Omitted Variable Bias
+#' and its consequences for different model types.
+#' 
+#' 
+#' ----------------------------------------------------------------------------
+
 
 library(shiny)
 
@@ -73,6 +73,10 @@ ui <- fluidPage(
             numericInput("rec_mean", 
                          "Resulting Regional Mean in Recruitment (#/plot)",
                          value = 15,
+                         min = 0),
+            numericInput("site_sd", 
+                         "SD of Additional Uncorrelated Site Variation ",
+                         value = 1,
                          min = 0),
 
             # br() element to introduce extra vertical spacing ----
@@ -155,12 +159,19 @@ ui <- fluidPage(
                                       $\\mu_j \\sim \\mathcal{N}(0, \\sigma_{site}^2)$<br>
 
                                       <br><br>
-                                      <b>FE model</b>: <br>
+                                      <b>FE Mean Differenced model</b>: <br>
+                                      <code>lm(y_dev_from_site_mean ~ x_dev_from_site_mean)</code><br>
+                                      $y_{ij} - \\bar{y_i} \\sim \\mathcal{N}(\\widehat{y_{ij} - \\bar{y_i}}, \\sigma^2)$<br>
+                                      $\\widehat{y_{ij} - \\bar{y_i}} =  \\beta_1 (x_{ij} - \\bar{x_i})$<br>
+
+                                      <br><br>
+                                      <b>FE Dummy Variables model</b>: <br>
                                       <code>lm(y ~ x + site)</code><br>
                                       $y_i \\sim \\mathcal{N}(\\widehat{y_i}, \\sigma^2)$<br>
                                       $\\widehat{y_ij} = \\beta_0 x_{1ij} + \\sum_{k=1}^{j} \\beta_k x_{2ij}$<br>
                                       $x_{2ij} =  1  \\text{ if site} = j, 0  \\text{ otherwise}$<br>
                                       
+
                                       <br><br>
                                       <b>Group Mean Covariate model</b>: <br>
                                       <code>lmer(y ~ x + x_site_mean + (1|site))</code><br>
@@ -241,6 +252,7 @@ server <- function(input, output) {
                          input$recruitment_sd,
                          input$temp_mean,
                          input$rec_mean,
+                         input$site_sd,
                          seed)
         })
     })
@@ -293,6 +305,7 @@ server <- function(input, output) {
             ts = input$temp_effect,
             rsd = input$recruitment_sd,
             tsd = input$temp_sd,
+            ssd = input$site_sd,
             esd = input$sd_plot,
             lsd = input$plot_temp_sd)
         })
