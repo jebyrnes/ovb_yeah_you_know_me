@@ -1,0 +1,363 @@
+---
+title: "Appendix 1: Models and Simulations to Evaluate the Consequences of Model Structure for Omitted Variable Bias"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+knitr::opts_knit$set(root.dir = here::here())
+
+#read in helpers
+knitr::read_chunk("scripts/ovb_temp_snail_funs.R")
+source("scripts/ovb_temp_snail_funs.R")
+source("scripts/make_ovb_diagram.R")
+
+knit_table <- function(a_tab){
+  a_tab %>%
+    knitr::kable(digits = 3) %>%
+    kableExtra::kable_classic_2() %>%
+    kableExtra::kable_styling(full_width = F)
+}
+```
+
+## The System and the Study
+
+To evaluate the impact of Omitted Variable Bias (OVB) on different models, consider a system where oceanography drives site temperature and recruitment over time. Temperature also fluctuates over time within each site. Recruitment and temperature influence snail abundance, as do other uncorrelated drivers. You have conducted a study in this system measuring 10 sites, each site sampled once per year over 10 years. In this study, you have recorded snail abundance and temperature. But have no measure of recruitment. Note, the results of models will be the same if you had instead sampled in one year across 10 sites with 10 plots per site if there were plot-level drivers of temperature that behaved the same as below.
+
+To parameterize our simulations, consider the following:  
+
+- Our Oceanography latent variable has a mean of 0 and a SD of 1.  
+- Site temperature is twice the oceanography variable and transformed to have a mean of 15C.  
+- Site recruitment is -2 multiplied by the oceanography variable and transformed to have a mean of 15 individuals per plot.  
+- There is additional random variation between sites with a mean of 0 and SD of 1.
+- Sites are sampled over 10 years.  
+- Within a site, the temperature varies over time according to a normal distribution with a mean of 1.  
+- There is a 1:1 relationship between temperature and snail abundance and recruitment and snails.  
+- Other non-correlated drivers in the system influence snail abundance with a mean influence of 0 and a SD of 1.
+
+Thus, the system looks like this:
+
+```{r system, echo = FALSE}
+make_snail_graph(
+  or = -2,
+  ot = 2,
+  rs = 1,
+  ts = 1,
+  rsd = 0,
+  tsd = 0,
+  ssd = 1,
+  esd = 1,
+  lsd = 1)
+```
+
+## Functions to Create The System
+
+To simulated data, let's begin by loading some libraries
+```{r libraries_for_simulations}
+```
+
+Next, we need a function that will create a template of simulated sites based on oceanography and the sampling design described above.
+
+```{r make_environment_function}
+```
+
+Great. Now, we need to add that year-to-year or plot-to-plot variability.
+
+```{r make_plots_function}
+```
+
+To analyze our data, we will compare several different fit models.
+
+- A naive linear model with no site term  
+- A random effects using site as a random intercept  
+- A fixed effects model where site is a fixed effect (i.e., turned into 1/0 dummy variables)  
+- A model where we include the site mean temperature as a covariate and site is a random effect  
+- A model where we include site mean temperature as a covariate and site mean centered temperature (i.e., temperature at a site in a year minus it's mean over the entire data set). Site is included as a random effect  
+- A panel model where we look at change in snails between years versus change in temperature between years with a random site effect
+
+```{r analyze_plots_function}
+```
+
+## Simulations and Results
+
+Let's begin by setting up 100 replicate simulations.
+
+```{r envt_sims}
+set.seed(31415)
+n_sims <- 100
+
+envt <- tibble(
+  sims = 1:n_sims
+) %>%
+  mutate(sites = map(sims, ~make_environment())) 
+```
+
+
+Just for a sanity check, here's the relationship between temperature and recruitment at the site level across all simulations.
+
+```{r plot_sites}
+ggplot(envt %>%
+         unnest(sites),
+       aes(x = site_temp, y = site_recruitment, group = sims)) +
+  geom_point(alpha = 0.4, color = 'grey') +
+  stat_smooth(method = "lm", size = 0.5, alpha = 0.5,
+              fill = NA, color = "black") +
+  labs(x = "Site Average Temperature", 
+       y = "Site Recruitment of Individuals Per Plot")
+```
+
+Great! Now, let's setup our sampling over time. 
+
+```{r sampling}
+plots_df <- envt %>%
+  mutate(site_year = map(sites, make_plots))
+```
+
+And, again, a sanity check...
+
+```{r plot_plots}
+ggplot(plots_df %>%
+         unnest(site_year),
+       aes(x = plot_temp, y = snails, color = as.character(sims), group = sims)) +
+  stat_smooth(method = "lm", fill = "NA") +
+  guides(color = "none") +
+  labs(x = "Plot Temperature",
+       y = "Snails per Plot")
+```
+
+So we can see that in this setup, the snail-temperature relationship is positive in nearly all of the simulations. But, how positive is it? What would our coefficients show on average across simulations?
+
+Let's fit models to each set of data
+
+```{r analyze_sims, warning = FALSE, message = FALSE}
+analysis_df <- plots_df %>%
+  mutate(analysis = map(site_year, analyze_plots)) %>%
+  unnest(analysis) 
+```
+
+And now let's look at the distribution of coefficients that would describe the relationship between temperature and snails from each mode.
+
+
+```{r ridges}
+analysis_df %>%
+  unnest(temp_effect) %>%
+  ggplot(aes(y = fct_rev(model_type), x = estimate)) +
+  ggridges::stat_density_ridges() +
+  labs(y="", x = "Model Estimated Temperature Effect")
+```
+
+Eyeballing it, we can see of course the naive model is too low, as is the RE model. How bad is the bias for the RE model?
+
+```{r tab}
+analysis_df %>%
+  unnest(temp_effect) %>%
+  group_by(`Model Type` = model_type) %>%
+  summarize(`Mean Estimate` = mean(estimate),
+            `SD Estimate` = sd(estimate)) %>%
+  knit_table
+```
+
+The downward bias produced by poor model choice is clear. We can see it if we plot the coefficient minus one, which if unbiased should reveal a distribution centered on 0.
+
+```{r bias_plot}
+analysis_df %>%
+  unnest(temp_effect) %>%
+  ggplot(aes(y = fct_rev(model_type), x = estimate - 1)) +
+  ggridges::stat_density_ridges() +
+  labs(y="", x = "Bias")
+```
+
+We can also look at the distribution of, for each simulated data set, how different  the RE model is from each other model.
+
+```{r diff_from_re_plot}
+analysis_df %>%
+  filter(model_type != "Naive") %>%
+  unnest(temp_effect) %>%
+  group_by(sims) %>%
+  mutate(diff_from_re = estimate - estimate[1]) %>%
+  ungroup() %>%
+  filter(model_type != "RE") %>%
+  ggplot(aes(y = fct_rev(model_type), x = diff_from_re)) +
+  ggridges::stat_density_ridges() +
+  labs(y="", x = "Difference from RE Model\nTemperature Effect")
+```
+
+
+Note, in all cases, we can see the effects of downward bias. This is clear, but, to put it in numbers - 
+
+```{r diff_from_re}
+analysis_df %>%
+  filter(model_type != "Naive") %>%
+  unnest(temp_effect) %>%
+  group_by(sims) %>%
+  mutate(diff_from_re = estimate - estimate[1]) %>%
+  ungroup() %>%
+  filter(model_type != "RE") %>%
+  group_by(model_type) %>%
+  summarize(`Mean Diff from RE` = mean(diff_from_re),
+            `SD Diff from RE` = sd(diff_from_re))  %>%
+  knit_table
+```
+
+
+If we were doing straight hypothesis testing, how often would our estimate of the temperature coefficient either overlap 0 or not have 1 within its confidence interval?
+
+```{r overlap_0_1}
+analysis_df %>%
+  filter(model_type != "Naive") %>%
+  unnest(temp_effect) %>%
+  mutate(overlap_0 = (estimate - 2*std.error)<0,
+         overlap_1 = (estimate - 2*std.error)<1 &
+           (estimate + 2*std.error)>1) %>%
+  group_by(`Model Type` = model_type) %>%
+  summarize(`95% CI Contains 0` = sum(overlap_0)/n(),
+            `95% CI does Not Contain 1` = (n()-sum(overlap_1))/n()) %>%
+  knit_table
+```
+
+Here we see the RE model is more likely to be subject to type II error. Further, it is far more likely than any other technique to not have the true coefficient value within 2 CI of its estimand. 
+
+## A Wrapper Function for Simulation
+
+This has been useful, but, if we want to automate the process for further exploration, let's wrap the code above into a function.
+
+```{r sim_wrapper_function}
+```
+
+## Is that Random Effect Needed?
+
+If we look at the correlated random effects models, what's the RE?
+
+```{r re_check}
+analysis_df %>%
+  filter(model_type %in% c("Group Mean Covariate", "Group Mean Centered")) %>%
+  unnest(coefs) %>%
+  filter(group == "site") %>%
+  group_by(`Model Type` = model_type) %>%
+  summarize(Term = "Site Random Effect",
+            `Mean Site SD` = mean(estimate),
+            `SD in Site SD` = sd(estimate)) %>%
+  knit_table
+```
+
+Both are the same, which makes sense given the formulation of the model. What if there was no additional site-level variation uncorrelated with temperature, though?
+
+
+```{r re_0}
+re_0_frame <- make_sims_and_analyze(site_sd = 0)
+
+re_0_frame %>%
+  filter(model_type %in% c("Group Mean Covariate", "Group Mean Centered")) %>%
+  unnest(coefs) %>%
+  filter(group == "site") %>%
+  group_by(`Model Type` = model_type) %>%
+  summarize(Term = "Site Random Effect",
+            `Mean Site SD` = mean(estimate),
+            `SD in Site SD` = sd(estimate)) %>%
+  knit_table
+```
+
+
+Both REs are the same - again - but both overlap 0. In the system we simulated, there is no uncorrelated site-level variability. It's all at the site-year (or site-plot) level. We have indeed run these models with *no site random effect*. They  produce the same answers for coefficients - both in this simulation with no site-level random effect as well as above when there *was* a site-level random effect. 
+
+```{r re_same_coef}
+# Without random site variation
+re_0_frame %>%
+  filter(grepl("Group Mean", model_type)) %>%
+  unnest(temp_effect) %>%
+  group_by(`Model Type` = model_type) %>%
+  summarize(`Mean Temp Effect` = mean(estimate),
+            `SD Temp Effect` = sd(estimate)) %>%
+  knit_table
+
+# With random site variation
+analysis_df %>%
+  filter(grepl("Group Mean", model_type)) %>%
+  unnest(temp_effect) %>%
+  group_by(`Model Type` = model_type) %>%
+  summarize(`Mean Temp Effect` = mean(estimate),
+            `SD Temp Effect` = sd(estimate)) %>%
+  knit_table
+```
+
+So should we just not worry about a site-level random effect? Not necesarily. First, if we  consider a site RE,  we can  look at residual variation due to both between site differences as well as residual replicate-level variation. This can be a useful analysis when attempting to tease apart variation that is versus is not correlated with a driver of interest. Second, while models without a site random effect can be fit and used, these models will be structurally incorrect - replicates are not IID, as there is correlated error within sites. Last, mixed models can also provide advantages when handling models with unbalanced data between sites (see below).
+
+Practically, however, the difference comes in with respect to whether you are interested in between site variation or not. The residual inflates with no RE, as it is now the combination of between site residual and within site residual terms. This could make a difference for various statistical tests down the line as well, but in terms of parameter estimates, we are still estimating a clean causal effect.
+
+
+
+## What About Unbalanced Data?
+
+One of the advantages to mixed modeling approaches is how they handle unbalanced data. What if, in the above example, we had lost samples from each site generating unbalanced data?
+
+```{r}
+set.seed(31415)
+#what do we keep?
+years_to_keep <- round(runif(10, 3, 10)) %>%
+    imap_dfr( ~ tibble(site = as.character(.y), 
+                       year = sample(1:10, .x),
+                       keep = T))
+
+#a function for unbalancing
+unbalance <- function(site_year_df, keep_df){
+  left_join(site_year_df, keep_df) %>%
+    filter(keep) 
+}
+
+#apply keeping to each site-year
+unbalanced_df <- analysis_df %>% 
+  select(-model_type, -fit, -coefs, -out_stats, -temp_effect) %>%
+  mutate(site_year = map(site_year, unbalance, 
+                            keep_df = years_to_keep),
+         analysis = map(site_year, analyze_plots)) %>%
+    unnest(analysis)  
+```
+
+How does this lack of balance affect estimation of causal coefficients?
+
+```{r unbalanced_ovb}
+unbalanced_df %>%
+    unnest(temp_effect) %>%
+  group_by(`Model Type` = model_type) %>%
+  summarize(`Mean Estimate` = mean(estimate),
+            `SD Estimate` = sd(estimate)) %>%
+  knit_table
+```
+
+We can see that point estimation here is improved somewhat. Although this could vary. More telling would be an exploration of those group means in the mixed versus fixed models. 
+
+<!--
+
+## Cluster Robust Standard Errors and Models with No Random Effects
+
+Apply cluster robust standard errors to models without random effects!!! To be expopounded upon later by Laura
+
+```{r fixest}
+library(fixest)
+
+fixest_df <- analysis_df %>%
+  group_by(sims) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  select(sims, sites, site_year) %>%
+  mutate(fixest_fit = map(site_year,
+                          ~feols(snails ~ plot_temp | site, 
+                                cluster = "site",
+                                data = .x)),
+         first_diff_fit = map(site_year,
+                          ~feols(delta_snails ~ delta_temp, 
+                                cluster = "site",
+                                data = .x))
+         ) %>%
+  pivot_longer(cols = c(fixest_fit, first_diff_fit),
+               names_to = "model_type",
+               values_to = "fit") %>%
+  mutate(coefs = map(fit, tidy))
+
+```
+
+-->
