@@ -148,7 +148,7 @@ ui <- fluidPage(
                                       <br><br>
                                       <b>Naive model</b>: <br>
                                       <code>lm(y ~ x)</code><br>
-                                      $y_{ij} \\sim \\mathcal{N}(\\widehat{y_{ij}}, \\sigma^2)$<br>
+                                      $y_{ij} \\sim \\mathcal{N} (\\widehat{y_{ij}}, \\sigma^2)$<br>
                                       $\\widehat{y_{ij}} = \\beta_0 x_{ij} +\ \beta_1$<br>
                                       
                                       <br><br>
@@ -187,10 +187,10 @@ ui <- fluidPage(
                                       $\\mu_j \\sim \\mathcal{N}(0, \\sigma_{site}^2)$<br>
                                       
                                       <br><br>
-                                      <b>Panel model</b> - assumed 1 measurement per site per year: <br>
-                                      <code>lmer(delta_y ~ delta_x + (1|site))</code><br>
+                                      <b>First Difference model</b> - assumed 1 measurement per site per year: <br>
+                                      <code>lm(delta_y ~ delta_x + site)</code><br>
                                       $\\Delta y_{ij} \\sim \\mathcal{N}(\\widehat{\\Delta y_{ij}}, \\sigma^2)$<br>
-                                      $\\widehat{\\Delta y_{ij}} = \\beta_0 \\Delta_x{ij} + \\beta_2 + \\mu_j$<br>
+                                      $\\widehat{\\Delta y_{ij}} = \\beta_0 \\Delta x_{ij} + \\beta_2 + \\mu_j$<br>
                                       $\\mu_j \\sim \\mathcal{N}(0, \\sigma_{site}^2)$<br>
                                       <br><br>
                                       
