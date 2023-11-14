@@ -147,7 +147,8 @@ analysis_df %>%
   unnest(temp_effect) %>%
   ggplot(aes(y = fct_rev(model_type), x = estimate)) +
   ggridges::stat_density_ridges() +
-  labs(y="", x = "Model Estimated Temperature Effect")
+  labs(y="", x = "Model Estimated Temperature Effect") +
+  geom_vline(xintercept = 1, linewidth = 1.5, lty = 3)
 ```
 
 Eyeballing it, we can see of course the naive model is too low, as is the RE model. How bad is the bias for the RE model?
