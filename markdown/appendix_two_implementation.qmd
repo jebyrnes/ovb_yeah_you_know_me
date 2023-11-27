@@ -137,7 +137,7 @@ library(sandwich)
 library(fixest)
 ```
 
-We can look at the SE for the temperature effect from `mod_fe` first with no correction, then the Huber-White correction from `sandwich`, and finally we can fit the same model using `fixest::feols()`, which uses slightly different syntax for incorporating fixed effects, and also output White's correction.
+We can look at the SE for the temperature effect from `mod_fe` first with no correction, then the Huber-White correction from `sandwich`, and finally we can fit the same model using `fixest::feols()`, which uses slightly different syntax for incorporating fixed effects, and also output the Huber-White correction.
 
 ```{r, robust_se}
 # No correction
@@ -145,58 +145,20 @@ tidy(mod_fe) |>
   filter(term == "temp")
 
 
-# White's SE via Sandwich
+# Huber-White SE via Sandwich
 coeftest(mod_fe, vcov = vcovCL(mod_fe, 
                                cluster = ~ site,
                                 type = "HC0")) |>
   tidy() |>
   filter(term == "temp")
 
-# Using fixest for White's correction with feols
+# Using fixest for Huber-White correction with feols
 feols(snails ~ temp | site, 
       vcov = "cluster",
       data = dat) |>
   tidy()
 
 ```
-
-
-These methods make little difference. That's because our simulated data is well behaved. We can add some site-level heteroskedasticity to the data by grouping by site and then adding some noise from a normal distribution with a mean of 0 and a sd equal to the site number (1-10).
-
-```{r, robust_se_real}
-dat_clust <- dat |>
-  group_by(site) |>
-  mutate(snails = snails + rnorm(10, 0, as.numeric(site))) |>
-  ungroup()
-```
-
-
-We can then refit the FE model and look at it's estimate and SE, as well as evaluate the SE when we incorporate White's correction from either `sandwich` or `fixest`.
-
-```{r, robust_se_real_mods}
-clust_fe <- lm(snails ~ temp + site, data = dat_clust)
-
-# No correction
-tidy(clust_fe) |>
-  filter(term == "temp")
-
-# White's SE
-coeftest(clust_fe, vcov = vcovCL(clust_fe, 
-                               cluster = ~ site,
-                                type = "HC0")) |>
-  tidy() |>
-  filter(term == "temp")
-
-# Using fixest for White's correction
-
-feols(snails ~ temp | site, 
-      vcov = "cluster",
-      data = dat_clust) |>
-  tidy()
-
-```
-
-We can see a substantial change incorporating a correction. In this case, it increases our power, although that is not always the case.
 
 ### References
 
