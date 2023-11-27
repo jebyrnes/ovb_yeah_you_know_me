@@ -1,5 +1,5 @@
 ---
-title: "Appendix 1: Models and Simulations to Evaluate the Consequences of Model Structure for Omitted Variable Bias"
+title: "Appendix A: Models and Simulations to Evaluate the Consequences of Model Structure for Omitted Variable Bias"
 output:
   html_document:
     toc: true
