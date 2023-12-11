@@ -18,7 +18,7 @@ To evaluate the impact of Omitted Variable Bias (OVB) on different models, consi
 
 To parameterize our simulations, consider the following:  
 
-- Our Oceanography latent variable has a mean of 0 and a SD of 1.  
+- Our Oceanography latent variable has a mean of 0 and a standard deviation (SD) of 1.  
 - Site temperature is twice the oceanography variable and transformed to have a mean of 15C.  
 - Site recruitment is -2 multiplied by the oceanography variable and transformed to have a mean of 15 individuals per plot.  
 - There is additional random variation between sites with a mean of 0 and SD of 1.
