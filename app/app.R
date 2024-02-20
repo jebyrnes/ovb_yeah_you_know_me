@@ -188,9 +188,9 @@ ui <- fluidPage(
                                       
                                       <br><br>
                                       <b>First Difference model</b> - assumed 1 measurement per site per year: <br>
-                                      <code>lm(delta_y ~ delta_x + site)</code><br>
+                                      <code>lm(delta_y ~ delta_x)</code><br>
                                       $\\Delta y_{ij} \\sim \\mathcal{N}(\\widehat{\\Delta y_{ij}}, \\sigma^2)$<br>
-                                      $\\widehat{\\Delta y_{ij}} = \\beta_0 \\Delta x_{ij} + \\beta_2 + \\mu_j$<br>
+                                      $\\widehat{\\Delta y_{ij}} = \\beta_0 \\Delta x_{ij} + \\beta_2$<br>
                                       $\\mu_j \\sim \\mathcal{N}(0, \\sigma_{site}^2)$<br>
                                       <br><br>
                                       
