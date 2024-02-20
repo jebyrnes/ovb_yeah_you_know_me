@@ -91,13 +91,13 @@ analyze_plots <- function(plot_df){
     ~model_type, ~fit,
     "Naive", lm(snails ~ plot_temp, data = plot_df),
     "RE", lmer(snails ~ plot_temp + (1|site), data = plot_df),
-    "FE Using Mean Differencing", lm(plot_snail_dev ~ plot_temp_dev, data = plot_df), #fix SE?
+    "FE Using Mean Differencing", lm(plot_snail_dev ~ plot_temp_dev, data = plot_df), 
     "FE with Dummy Variables", lm(snails ~ plot_temp + site, data = plot_df),
     "Group Mean Covariate", lmer(snails ~ plot_temp + site_mean_temp + (1|site), data = plot_df),
     "Group Mean Centered", lmer(snails ~ plot_temp_dev + site_mean_temp + (1|site), data = plot_df),
     "Group Mean Covariate, no RE", lm(snails ~ plot_temp + site_mean_temp, data = plot_df),
     "Group Mean Centered, no RE", lm(snails ~ plot_temp_dev + site_mean_temp, data = plot_df),
-    "First Differences", lm(delta_snails ~ delta_temp,data = plot_df) #fix SE?
+    "First Differences", lm(delta_snails ~ delta_temp, data = plot_df) 
     
   ) %>%
     mutate(coefs = map(fit, tidy), #get coefficients with broom
