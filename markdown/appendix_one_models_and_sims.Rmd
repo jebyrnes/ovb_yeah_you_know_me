@@ -361,34 +361,3 @@ unbalanced_df %>%
 
 We can see that point estimation here is improved somewhat. Although this could vary. More telling would be an exploration of those group means in the mixed versus fixed models. 
 
-<!--
-
-## Cluster Robust Standard Errors and Models with No Random Effects
-
-Apply cluster robust standard errors to models without random effects!!! To be expopounded upon later by Laura
-
-```{r fixest}
-library(fixest)
-
-fixest_df <- analysis_df %>%
-  group_by(sims) %>%
-  slice(1L) %>%
-  ungroup() %>%
-  select(sims, sites, site_year) %>%
-  mutate(fixest_fit = map(site_year,
-                          ~feols(snails ~ plot_temp | site, 
-                                cluster = "site",
-                                data = .x)),
-         first_diff_fit = map(site_year,
-                          ~feols(delta_snails ~ delta_temp, 
-                                cluster = "site",
-                                data = .x))
-         ) %>%
-  pivot_longer(cols = c(fixest_fit, first_diff_fit),
-               names_to = "model_type",
-               values_to = "fit") %>%
-  mutate(coefs = map(fit, tidy))
-
-```
-
--->
