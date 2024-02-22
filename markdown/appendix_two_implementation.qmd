@@ -22,11 +22,18 @@ To demonstrate the simplicity of the approaches outlined in the manuscript, here
 For those not familiar with the packages used in this example, here we describe what purpose each one serves. We will use `dplyr` for making sure columns are of the right class and for the action of calculating group meand and anomalies. `purrr` will be used to automate some summary output creation later in the script. `lme4` will be used to fit linear mixed effects models. Last, `broom.mixed` is a wonderful package that generates easily readable output from mixed models.
 
 ```{r}
-# libraries
-library(dplyr)
-library(purrr)
-library(lme4)
-library(broom.mixed)
+## libraries
+# data manipulation
+library(dplyr) # used version 1.1.4
+library(purrr) # used version 1.0.2
+
+# modeling
+library(lme4) # used version 1.1-35.1
+library(fixest) # version 0.11.2
+
+# viewing output
+library(broom) # used version 1.0.5
+library(broom.mixed) # used version 0.2.9.4
 ```
 
 
@@ -57,22 +64,28 @@ head(dat)
 
 ## Models
 
-With the data as shown above, we can now fit a naive linear model that does not incorporate site using `lm()`. We can then fit an Random Effects form of the model with site as the RE using `lmer()` from `lme4`.
+With the data as shown above, we can now fit a naive linear model that does not incorporate site using `lm()`.
 
-```{r, naive_and_mixed}
+```{r mod_naive}
 mod_naive <- lm(snails ~ temp, data = dat)
+```
 
+We can then fit an Random Effects form of the model with site as the random effect (RE) using `lmer()` from `lme4`.
+
+```{r mixed}
 mod_re <- lmer(snails ~ temp + (1|site),
                data = dat)
 ```
 
-To fit an Econometric Fixed Effects model, we can again use `lm()` and incorporate site as a Fixed Effect predictor.
+To fit an Econometric Fixed Effects model, we can again use `lm()` and incorporate site as a Fixed Effect predictor. First, make sure that site is a character of factor, though, as we did above when we loaded the data. If you are unsure, check the class of the site column. 
 
 ```{r, fe}
+class(dat$site) # all good!
+
 mod_fe <- lm(snails ~ temp + site, data = dat)
 ```
 
-To see the dummy coding of the FE, try `model.matrix(mod_fe)`.
+To see the dummy coding of the FE, try `model.matrix(mod_fe)`. To implement a two-way fixed effects model, you can add site + year to the formula above, making sure year is also a character or factor.
 
 We can implement a FE model using the Fixed Effects Transformation as well. To do this, we group by site and then calculate the site-level anomaly for both snails and temperature. We then fit the linear model with `lm()` examining the relationship between these two site-level anomalies.
 
@@ -86,6 +99,14 @@ dat <- dat |>
 # FE Transformation Model
 mod_fe_trans <- lm(snail_site_anom ~ temp_site_anom, data = dat)
 ```
+
+Econometric Fixed Effects can also be implemented in the package fixest with the function `feols()`, which is highly efficient for large datasets with many units (e.g. sites) and therefore lots of fixed effects. It also easily incorporates clustered robust standard errors and other standard errors. In fact, it uses clustered SE by default. Here, we force it to produce non-clustered SEs for comparison to other approaches. See our section on robust standard errors below for more.
+
+```{r feols_fe}
+mod_fe_feols <- feols(snails ~ temp | site, se = "standard", data = dat) 
+```
+
+Like the FE models above, you can have a TWFE model by having the FE specification as `site + year`.
 
 For the Group Mean Covariate (Mundlak) model and the Group Mean Centered model, we need to calculate a mean temperature by site. Then we can fit both models with that mean as a hierarchical predictor and a random effect of site using `lmer()`.
 
@@ -115,6 +136,7 @@ mods <- list(mod_naive = mod_naive,
              mod_re = mod_re, 
              mod_fe = mod_fe,
              mod_fe_trans = mod_fe_trans,
+             mod_fe_feols = mod_fe_feols,
              mod_gmcov = mod_gmcov,
              mod_gmcent = mod_gmcent)
 
@@ -132,31 +154,48 @@ out
 Robust standard errors are of use in a great many cases. If errors are hetergeneous between groups, have temporal autocorrelation, or other issues, they can be very used [see @abadie_when_2017, @cameron_practitioners_2015, and @oshchepkov_bridging_2022 for an introduction and when and where to use them]. In R, two main ways to use them are either via the `sandwich` package along with `lmtest` or to fit them with the `fixest` package.
 
 ```{r, rse_libs}
-library(lmtest)
-library(sandwich)
-library(fixest)
+library(lmtest) # version 0.9-40
+library(sandwich) # version 3.1-0
+library(fixest) # version 0.11.2
 ```
 
-We can look at the SE for the temperature effect from `mod_fe` first with no correction, then the Huber-White correction from `sandwich`, and finally we can fit the same model using `fixest::feols()`, which uses slightly different syntax for incorporating fixed effects, and also output the Huber-White correction.
+We can look at the SE for the temperature effect from `mod_fe` first with no correction, then the Huber-White correction from `sandwich`, and finally we can fit the same model using `fixest::feols()`, which uses slightly different syntax for incorporating fixed effects, and also output the Huber-White correction. See also [https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) for more on SE in `fixest`.
+
+Note, there is a small difference between the output from `sandwich` and `fixest` for clustering and the Huber-White correction together due to how each package implements the calculation of effective degrees of freedom.
 
 ```{r, robust_se}
 # No correction
 tidy(mod_fe) |>
   filter(term == "temp")
 
+# Huber-White SE without clustering
+coeftest(mod_fe, 
+         vcov = vcovCL(mod_fe, 
+                       type = "HC1")) |>
+    tidy() |>
+    filter(term == "temp")
 
-# Huber-White SE via Sandwich
-coeftest(mod_fe, vcov = vcovCL(mod_fe, 
-                               cluster = ~ site,
-                                type = "HC0")) |>
+# Using fixest for Huber-White correction without clustering
+feols(snails ~ temp | site, 
+      vcov = "hetero",
+      data = dat) |>
+  tidy()
+
+# Huber-White SE with site-level clustering via the Sandwich package in R 
+coeftest(mod_fe, 
+         vcov = vcovCL(mod_fe, 
+                       cluster = ~ site,
+                       type = "HC1")) |>
   tidy() |>
   filter(term == "temp")
 
-# Using fixest for Huber-White correction with feols
+
+# Using fixest for Huber-White correction and site-level clustering with feols
 feols(snails ~ temp | site, 
       vcov = "cluster",
       data = dat) |>
-  tidy()
+  tidy(vcov = "cluster")
+
 
 ```
 
