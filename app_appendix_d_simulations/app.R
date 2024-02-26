@@ -16,8 +16,8 @@ library(DiagrammeR)
 theme_set(theme_bw(base_size = 18))
 setwd(here::here())
 
-source("scripts/ovb_temp_snail_funs.R")
-source("scripts/make_ovb_diagram.R")
+source("ovb_temp_snail_funs.R")
+source("make_ovb_diagram.R")
 
 # Define UI for application 
 ui <- fluidPage(
