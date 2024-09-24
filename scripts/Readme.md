@@ -1,4 +1,4 @@
-# Helper code files for manuscript and appendices of Byrnes, J.E.K. and Dee, L.E. 2024. Causal inference with observational data and unobserved confounding variables. Ecology Letters.
+# Helper code files for manuscript and supporting information of Byrnes, J.E.K. and Dee, L.E. 2024. Causal inference with observational data and unobserved confounding variables. Ecology Letters.
   
 - *make_ovb_diagram.R* - makes the DAG/path diagram used in the manuscript. This was an initial draft used as the authors explored programatic figure generation.  
   
