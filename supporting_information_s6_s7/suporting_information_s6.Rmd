@@ -151,6 +151,13 @@ analysis_df %>%
   geom_vline(xintercept = 1, linewidth = 1.5, lty = 3)
 ```
 
+```{r}
+#| results: hide
+#| echo: false
+
+ggsave("supporting_information_s6_s7/figure_6.svg")
+```
+
 Eyeballing it, we can see of course the naive model is too low, as is the RE model. How bad is the bias for the RE model?
 
 ```{r tab}
