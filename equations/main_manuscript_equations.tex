@@ -1,0 +1,88 @@
+\documentclass{article}
+\usepackage{amsmath}
+
+
+\begin{document}
+
+Eqn. 1 Data generating process for snails
+
+\begin{equation}
+y_{ij} = \beta_0 = \beta_1 x_{ij} + \gamma w_i + \epsilon_{ij}
+\end{equation}\\
+
+Eqn. 2 Naive model
+
+\begin{equation}
+y_{ij} = \beta_{0} + \beta_{1}x_{ij} + \epsilon_{ij}
+\end{equation}\\
+
+Eqn. 3 Random effects/mixed model
+
+\begin{equation}
+  \begin{split}
+& y_{ij} = \beta_{0} + \beta_{1}x_{ij} + \delta_{i} + \epsilon_{ij} \\
+& \delta_{i}\mathcal{\sim N}\left( 0,\sigma_{site}^{2} \right) \\
+& \epsilon_{ij}\mathcal{\sim N}\left( 0,\sigma^{2} \right) \\
+  \end{split}
+\end{equation}\\
+
+Eqn. 4 Model separating plot and site error
+
+\begin{equation}
+y_{ij} = \beta_{0} + \beta_{1}x_{ij} + \epsilon_{ij} + \ u_{i}
+\end{equation}\\
+
+
+Eqn. 5 Fixed Effects Transformation
+
+\begin{equation}
+  \begin{split}
+y_{ij} - \overline{y_{i}} &= \beta_{1}\left( x_{ij} - \overline{x_{i}} \right) + \left( \epsilon_{ij} - \overline{\epsilon_{i}} \right) + \left(u_{i} - \overline{u_{i}} \right) \\
+&= \beta_{1}\left( x_{ij} - \overline{x_{i}} \right) + \left( \epsilon_{ij} - \overline{\epsilon_{i}} \right)
+  \end{split}
+\end{equation}\\
+
+
+Eqn. 6 Fixed Effects Dummy and Means Models 
+
+\begin{equation}
+  \begin{split}
+y_{ij} &= \beta_{1}x_{1ij} + \sum_{}^{}{\lambda_{i}x_{2i}} + \epsilon_{ij} \\
+&= \beta_{1}x_{1ij}{\  + \ \lambda}_{i} + \epsilon_{ij}  
+  \end{split}
+\end{equation}\\
+
+Eqn. 7 Group Mean Covariate Model/Mundlak Device
+
+\begin{equation}
+  \begin{split}
+& y_{ij} = \beta_{0} + \beta_{1} x_{ij} + \beta_{2}\overline{x_{i}} + \delta_{i} + \epsilon_{ij} \\
+& \delta_{i} \mathcal{\sim N} \left( 0,\sigma_{site}^{2} \right) \\
+& \epsilon_{ij}\mathcal{\sim N}\left( 0,\sigma^{2} \right) \\  
+  \end{split}
+\end{equation}\\
+
+Eqn. 8 Group Mean Centered Model
+
+\begin{equation}
+y_{ij} = \beta_{0} + \beta_{1}\left( x_{ij} - \overline{x_{i}} \right) + \beta_{2}\overline{x_{i}} + \delta_{i} + \epsilon_{ij}
+\end{equation}\\
+
+Eqn. 9 First Differences Model
+
+\begin{equation}
+  \begin{split}
+y_{ij}  - \ y_{i(j - 1)} &= \beta_{1}x_{1ij} - \beta_{1} x_{1i(j - 1)} + \lambda_{i}j - \lambda_{i}(j - 1) + \epsilon_{ij} - \epsilon_{i(j - 1)} \\
+\Delta y_{ij} &= \beta_{1} \Delta x_{1ij} + \lambda_{i} + \Delta \epsilon_{ij} \\ 
+  \end{split}
+\end{equation}\\
+
+Box 2, Eqn. 1
+\[y_{ijk} = {\ \beta}_{1}x_{1ijk}\  + \lambda_{k} + \ \eta_{ij\ } + \epsilon_{ijk}\]\\
+
+
+Box 2, Eqn. 2
+\[y_{ijk} = \beta_{0} + \beta_{1}x_{ijk} + \beta_{2}\overline{x_{k}} + \beta_{3}\overline{x_{ij}} + \delta_{k} + \delta_{ij} + \epsilon_{ijk}\]\\
+
+
+\end{document}
