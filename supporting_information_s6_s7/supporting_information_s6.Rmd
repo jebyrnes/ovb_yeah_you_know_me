@@ -156,6 +156,7 @@ analysis_df %>%
 #| echo: false
 
 ggsave("supporting_information_s6_s7/figure_6.svg")
+ggsave("supporting_information_s6_s7/figure_6.pdf")
 ```
 
 Eyeballing it, we can see of course the naive model is too low, as is the RE model. How bad is the bias for the RE model?
