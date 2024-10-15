@@ -5,3 +5,7 @@
 .DS_Store
 manuscript/
 references/
+*.aux
+*.log
+*.gz
+*.Rnw
