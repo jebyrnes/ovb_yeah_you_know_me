@@ -22,6 +22,9 @@ To demonstrate the simplicity of the approaches outlined in the manuscript, here
 For those not familiar with the packages used in this example, here we describe what purpose each one serves. We will use `dplyr` for making sure columns are of the right class and for the action of calculating group meand and anomalies. `purrr` will be used to automate some summary output creation later in the script. `lme4` will be used to fit linear mixed effects models. Last, `broom.mixed` is a wonderful package that generates easily readable output from mixed models.
 
 ```{r}
+## start and set environment
+setwd(here::here())
+
 ## libraries
 # data manipulation
 library(dplyr) # used version 1.1.4

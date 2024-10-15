@@ -9,6 +9,10 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+
+# because we are knitting, instead of
+# setwd(here::here())
+# we need...
 knitr::opts_knit$set(root.dir = here::here())
 
 #read in helpers
@@ -42,6 +46,7 @@ To parameterize our simulations, consider the following:
 Thus, the system looks like this:
 
 ```{r system, echo = FALSE}
+## make a graph
 make_snail_graph(
   or = -2,
   ot = 2,
